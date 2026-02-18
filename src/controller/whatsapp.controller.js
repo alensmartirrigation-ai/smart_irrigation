@@ -27,6 +27,10 @@ exports.sendMessage = asyncHandler(async (req, res) => {
   });
 });
 
+exports.verifyWebhook = (req, res) => {
+  return res.sendStatus(200);
+};
+
 exports.handleWebhook = asyncHandler(async (req, res) => {
   const payload = req.body;
   
