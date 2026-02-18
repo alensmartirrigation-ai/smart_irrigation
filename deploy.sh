@@ -160,45 +160,71 @@ until curl -fs "http://localhost:$APP_PORT/" >/dev/null 2>&1; do
 done
 echo " server is up (PID $SERVER_PID)"
 
-# ─── Create a localtunnel to expose the server publicly ───
-echo ""
-echo "Opening localtunnel on port $APP_PORT ..."
-TUNNEL_LOG=$(mktemp)
-
-npx -y localtunnel --port "$APP_PORT" > "$TUNNEL_LOG" 2>&1 &
-TUNNEL_PID=$!
-
-# Wait for localtunnel to print the URL (up to 30 s)
-TUNNEL_URL=""
-for i in $(seq 1 30); do
-  TUNNEL_URL=$(grep -oE 'https?://[^ ]+' "$TUNNEL_LOG" 2>/dev/null | head -1)
-  if [ -n "$TUNNEL_URL" ]; then
-    break
+# ─── Create a localtunnel to expose the server publicly (Manual flag only) ───
+START_TUNNEL=false
+for arg in "$@"; do
+  if [ "$arg" == "--tunnel" ]; then
+    START_TUNNEL=true
   fi
-  sleep 1
 done
 
-if [ -n "$TUNNEL_URL" ]; then
-  echo ""
-  echo "========================================"
-  echo "  🌐  PUBLIC TUNNEL URL"
-  echo "  $TUNNEL_URL"
-  echo "========================================"
-  echo ""
+if [ "$START_TUNNEL" = "true" ]; then
+  # Check if a tunnel is already running on this port
+  if pgrep -f "lt --port $APP_PORT" > /dev/null; then
+    echo "ℹ️  Localtunnel is already running on port $APP_PORT. Skipping start."
+    TUNNEL_PID=""
+    TUNNEL_LOG=""
+  else
+    echo ""
+    echo "Opening localtunnel on port $APP_PORT ..."
+    TUNNEL_LOG=$(mktemp)
+
+    npx -y localtunnel --port "$APP_PORT" > "$TUNNEL_LOG" 2>&1 &
+    TUNNEL_PID=$!
+
+    # Wait for localtunnel to print the URL (up to 30 s)
+    TUNNEL_URL=""
+    for i in $(seq 1 30); do
+      TUNNEL_URL=$(grep -oE 'https?://[^ ]+' "$TUNNEL_LOG" 2>/dev/null | head -1)
+      if [ -n "$TUNNEL_URL" ]; then
+        break
+      fi
+      sleep 1
+    done
+
+    if [ -n "$TUNNEL_URL" ]; then
+      echo ""
+      echo "========================================"
+      echo "  🌐  PUBLIC TUNNEL URL"
+      echo "  $TUNNEL_URL"
+      echo "========================================"
+      echo ""
+    else
+      echo "⚠️  Could not detect tunnel URL within 30 s. Check $TUNNEL_LOG for details." >&2
+    fi
+  fi
 else
-  echo "⚠️  Could not detect tunnel URL within 30 s. Check $TUNNEL_LOG for details." >&2
+  echo ""
+  echo "ℹ️  Skipping tunnel creation. Use --tunnel to expose public URL."
+  echo "   (For cloud servers, use the direct public IP instead)"
+  echo ""
+  TUNNEL_PID=""
+  TUNNEL_LOG=""
 fi
 
 # ─── Cleanup on exit ───
 cleanup() {
   echo "Shutting down..."
-  kill "$TUNNEL_PID" 2>/dev/null
-  kill "$SERVER_PID" 2>/dev/null
-  rm -f "$TUNNEL_LOG"
-  wait "$SERVER_PID" 2>/dev/null
-  wait "$TUNNEL_PID" 2>/dev/null
+  if [ -z "${TUNNEL_PID:-}" ]; then
+    : # No tunnel to kill
+  else
+    kill "$TUNNEL_PID" 2>/dev/null
+  fi
+  kill "${SERVER_PID:-}" 2>/dev/null
+  [ -f "${TUNNEL_LOG:-}" ] && rm -f "$TUNNEL_LOG"
+  wait "${SERVER_PID:-}" 2>/dev/null
 }
 trap cleanup EXIT INT TERM
 
-# Keep the script alive until both processes exit
-wait "$SERVER_PID"
+# Keep the script alive until the server process exits
+wait "${SERVER_PID:-}"
