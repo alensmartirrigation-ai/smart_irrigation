@@ -1,22 +1,17 @@
 const bcrypt = require('bcrypt');
 const { Op } = require('sequelize');
-const { User, Farm, UserFarm, sequelize } = require('../models');
+const { User, Farm, sequelize } = require('../models');
 const logger = require('../utils/logger');
 const config = require('../config/default');
 
 const SALT_ROUNDS = 10;
 
 class UserService {
-  constructor() {}
-
   async init() {
     try {
-      if (sequelize.authenticate) {
-        await sequelize.authenticate();
-        logger.info('Database connection established successfully.');
-      }
+      await sequelize.authenticate();
+      logger.info('Database connection established successfully.');
 
-      // Sync models
       await sequelize.sync({ alter: true });
       logger.info('Database models synchronized.');
 
@@ -35,10 +30,7 @@ class UserService {
       }
 
       const normalizedPhone = config.admin.phone.replace(/\D/g, '');
-
-      const existingAdmin = await User.findOne({
-        where: { role: 'admin' }
-      });
+      const existingAdmin = await User.findOne({ where: { role: 'admin' } });
 
       if (!existingAdmin) {
         const hashedPassword = await bcrypt.hash(config.admin.password, SALT_ROUNDS);
@@ -53,7 +45,6 @@ class UserService {
 
         logger.info('Default admin seeded securely');
       }
-
     } catch (error) {
       logger.error('Failed to seed admin', { error: error.message });
     }
@@ -75,23 +66,13 @@ class UserService {
   async saveAdminInfo(details) {
     try {
       const admin = await User.findOne({ where: { role: 'admin' } });
-      if (!admin) {
-        throw new Error('Admin account not found');
-      }
+      if (!admin) throw new Error('Admin account not found');
 
       const { name, phone, username, password } = details;
       if (name) admin.name = name;
-      
-      if (phone) {
-        const normalizedPhone = phone.replace(/\D/g, '');
-        admin.phone = normalizedPhone;
-      }
-      
+      if (phone) admin.phone = phone.replace(/\D/g, '');
       if (username) admin.username = username;
-      
-      if (password) {
-        admin.password = await bcrypt.hash(password, SALT_ROUNDS);
-      }
+      if (password) admin.password = await bcrypt.hash(password, SALT_ROUNDS);
 
       await admin.save();
       const { password: _, ...adminInfo } = admin.toJSON();
@@ -107,7 +88,6 @@ class UserService {
       if (!identifier || !password) return null;
 
       const normalizedPhone = identifier.replace(/\D/g, '');
-
       const user = await User.findOne({
         where: {
           [Op.or]: [
@@ -124,7 +104,6 @@ class UserService {
 
       const { password: _, ...userInfo } = user.toJSON();
       return userInfo;
-
     } catch (error) {
       logger.error('Authentication failed', { error: error.message });
       return null;
@@ -133,28 +112,18 @@ class UserService {
 
   async addUser(name, phone, role = 'user') {
     try {
-      if (!name || !phone) {
-        throw new Error('Name and phone are required');
-      }
+      if (!name || !phone) throw new Error('Name and phone are required');
 
       const normalizedPhone = phone.replace(/\D/g, '');
-
       const existingUser = await User.findOne({
         where: {
-          [Op.or]: [
-            { phone: normalizedPhone },
-            { username: normalizedPhone }
-          ]
+          [Op.or]: [{ phone: normalizedPhone }, { username: normalizedPhone }]
         }
       });
 
-      if (existingUser) {
-        throw new Error('User with this phone number already exists');
-      }
+      if (existingUser) throw new Error('User already exists');
 
-      // Default password for new users is their phone number
       const hashedPassword = await bcrypt.hash(normalizedPhone, SALT_ROUNDS);
-
       const newUser = await User.create({
         name,
         phone: normalizedPhone,
@@ -165,7 +134,6 @@ class UserService {
 
       const { password: _, ...userInfo } = newUser.toJSON();
       return userInfo;
-
     } catch (error) {
       logger.error('Failed to add user', { error: error.message });
       throw error;
@@ -181,9 +149,7 @@ class UserService {
 
       user.password = await bcrypt.hash(newPassword, SALT_ROUNDS);
       await user.save();
-
       return true;
-
     } catch (error) {
       logger.error('Failed to update password', { error: error.message });
       throw error;
@@ -196,32 +162,19 @@ class UserService {
       if (!user) throw new Error('User not found');
 
       const { name, phone, role } = details;
-
       if (name) user.name = name;
-
       if (phone) {
         const normalizedPhone = phone.replace(/\D/g, '');
-
-        const exists = await User.findOne({
-          where: {
-            phone: normalizedPhone,
-            id: { [Op.ne]: id }
-          }
-        });
-
+        const exists = await User.findOne({ where: { phone: normalizedPhone, id: { [Op.ne]: id } } });
         if (exists) throw new Error('Phone already in use');
-
         user.phone = normalizedPhone;
         user.username = normalizedPhone;
       }
-
       if (role) user.role = role;
 
       await user.save();
-
-      const { password: _, ...userInfo } = user.toJSON();
+      const { password, ...userInfo } = user.toJSON();
       return userInfo;
-
     } catch (error) {
       logger.error('Failed to update user', { error: error.message });
       throw error;
@@ -232,10 +185,8 @@ class UserService {
     try {
       const user = await User.findByPk(id);
       if (!user) throw new Error('User not found');
-
       await user.destroy();
       return true;
-
     } catch (error) {
       logger.error('Failed to delete user', { error: error.message });
       throw error;
@@ -246,14 +197,11 @@ class UserService {
     try {
       const user = await User.findByPk(userId);
       const farm = await Farm.findByPk(farmId);
-      if (!user || !farm) {
-        throw new Error('User or Farm not found');
-      }
+      if (!user || !farm) throw new Error('User or Farm not found');
       await user.addFarm(farm);
-      logger.info('Linked user to farm', { userId, farmId });
       return true;
     } catch (error) {
-      logger.error('Failed to link user to farm', { error: error.message });
+      logger.error('Failed to link farm', { error: error.message });
       throw error;
     }
   }
@@ -262,14 +210,11 @@ class UserService {
     try {
       const user = await User.findByPk(userId);
       const farm = await Farm.findByPk(farmId);
-      if (!user || !farm) {
-        throw new Error('User or Farm not found');
-      }
+      if (!user || !farm) throw new Error('User or Farm not found');
       await user.removeFarm(farm);
-      logger.info('Unlinked user from farm', { userId, farmId });
       return true;
     } catch (error) {
-      logger.error('Failed to unlink user from farm', { error: error.message });
+      logger.error('Failed to unlink farm', { error: error.message });
       throw error;
     }
   }
@@ -280,9 +225,7 @@ class UserService {
         attributes: { exclude: ['password'] },
         include: [{ model: Farm, through: { attributes: [] } }]
       });
-
       return users.map(user => user.toJSON());
-
     } catch (error) {
       logger.error('Failed to get users', { error: error.message });
       return [];
@@ -295,9 +238,7 @@ class UserService {
         attributes: { exclude: ['password'] },
         include: [{ model: Farm, through: { attributes: [] } }]
       });
-
       return user ? user.toJSON() : null;
-
     } catch (error) {
       logger.error('Failed to fetch user', { error: error.message });
       return null;
