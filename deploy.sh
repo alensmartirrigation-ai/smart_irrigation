@@ -72,7 +72,7 @@ ensure_docker_influx() {
 get_org_id() {
   curl -s -H "Authorization: Token $INFLUX_TOKEN" \
     "$INFLUX_URL/api/v2/orgs?org=$INFLUX_ORG" | \
-    python - <<'PY'
+    python3 - <<'PY'
 import json,sys
 text=sys.stdin.read()
 data=json.loads(text or '{}')
@@ -92,7 +92,7 @@ ensure_bucket() {
   local bucket_exists
   bucket_exists=$(curl -s -H "Authorization: Token $INFLUX_TOKEN" \
     "$INFLUX_URL/api/v2/buckets?name=$INFLUX_BUCKET" | \
-    python - <<'PY'
+    python3 - <<'PY'
 import json,sys
 data=json.load(sys.stdin)
 buckets=data.get('buckets', [])
