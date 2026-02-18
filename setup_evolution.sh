@@ -72,10 +72,10 @@ EOF
 
 # 3. Deploy
 echo "🚢 Deploying containers..."
-if command -v docker-compose >/dev/null 2>&1; then
-  docker-compose up -d
-elif docker compose version >/dev/null 2>&1; then
+if docker compose version >/dev/null 2>&1; then
   docker compose up -d
+elif command -v docker-compose >/dev/null 2>&1; then
+  docker-compose up -d
 else
   echo "❌ Error: Docker Compose is not installed." >&2
   exit 1
