@@ -13,10 +13,11 @@ const MAX_CONTEXT_TURNS = 6;
 const DEFAULT_FARM_ID = env.DEFAULT_FARM_ID || 'farm-01';
 
 const intentSchema = z.object({
+  type: z.enum(['data_query', 'general_chat']),
   farm_id: z.string().trim().min(1).optional(),
-  metric: z.enum(ALLOWED_METRICS),
-  aggregation: z.enum(ALLOWED_AGGREGATIONS),
-  time_range: z.string().trim().min(1),
+  metric: z.enum(ALLOWED_METRICS).optional(),
+  aggregation: z.enum(ALLOWED_AGGREGATIONS).optional(),
+  time_range: z.string().trim().min(1).optional(),
 });
 
 const startOfUtcDay = (date = new Date()) =>
@@ -219,10 +220,13 @@ class AIService {
         {
           role: 'system',
           content:
-            'Convert user query into JSON only with keys: farm_id, metric, aggregation, time_range. ' +
+            'Categorize user query into "data_query" or "general_chat". ' +
+            'If it is "data_query" (about sensor readings like temp, humidity, soil), provide: farm_id, metric, aggregation, time_range. ' +
             `metric must be one of: ${ALLOWED_METRICS.join(', ')}. ` +
             `aggregation must be one of: ${ALLOWED_AGGREGATIONS.join(', ')}. ` +
-            'time_range should be a concise phrase like yesterday, today, last 7 days, last 3 days.',
+            'time_range should be a concise phrase like yesterday, today, last 7 days. ' +
+            'If "general_chat", set type to "general_chat" and omit other fields except optionally farm_id. ' +
+            'Return valid JSON only.',
         },
         ...historyMessages,
         {
@@ -303,6 +307,11 @@ class AIService {
 
     const conversationId = options.conversationId || options.farmId || DEFAULT_FARM_ID;
     const intent = await this.extractIntent(question, options.farmId, conversationId);
+
+    if (intent.type === 'general_chat') {
+      throw new Error('GENERAL_CHAT_INTENT');
+    }
+
     const timeWindow = normalizeTimeRange(intent.time_range);
 
     if (timeWindow.days > MAX_LOOKBACK_DAYS) {
@@ -375,7 +384,10 @@ class AIService {
           {
             role: 'system',
             content:
-              'You are a concise smart-irrigation assistant. If you are unsure, say you need a clearer question.',
+              'You are a smart-irrigation system assistant. ' +
+              'If the user is saying hello or simple greeting, respond naturally but keep it brief. ' +
+              'If the user asks a personal query or anything unrelated to farm/irrigation data, ' +
+              'strictly respond with the exact phrase: "not in context".',
           },
           ...historyMessages,
           ...context,
