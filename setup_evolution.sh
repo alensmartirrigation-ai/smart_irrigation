@@ -1,5 +1,4 @@
-#!/usr/bin/env bash
-set -euo pipefail
+#!/bin/bash
 
 # --- Configuration ---
 EVO_DIR="$HOME/evolution-api"
@@ -7,7 +6,18 @@ API_PORT=8080
 API_KEY="8651c188-cf60-4761-9e55-4c911094dcab"
 DB_PASS="evolution_secret_pass_123"
 
-echo "🚀 Starting Evolution API v2 Deployment..."
+# --- Fresh Deployment Logic ---
+if [[ "$1" == "--fresh" ]]; then
+  echo "🧹 Performing deep cleanup for fresh deployment..."
+  if [ -d "$EVO_DIR" ]; then
+    cd "$EVO_DIR"
+    docker compose down -v 2>/dev/null || true
+    rm -rf "$EVO_DIR"
+  fi
+  echo "✅ Cleanup complete."
+fi
+
+echo "🚀 Starting Evolution API v2 Deployment (Stable)..."
 
 # 1. Create directory structure
 mkdir -p "$EVO_DIR"
@@ -80,15 +90,28 @@ else
   exit 1
 fi
 
+sleep 10
+
+# 4. Create default instance
+echo "🤖 Creating default instance 'smart_irrigation_bot'..."
+curl -s -X POST "http://localhost:${API_PORT}/instance/create" \
+-H 'Content-Type: application/json' \
+-H "apikey: ${API_KEY}" \
+-d '{
+  "instanceName": "smart_irrigation_bot",
+  "qrcode": true,
+  "integration": "WHATSAPP-BAILEYS"
+}'
+
 echo ""
 echo "===================================================="
-echo " ✅ Evolution API v2 is deploying!"
+echo " ✅ Evolution API v2 Freshly Deployed!"
 echo "===================================================="
-echo " 🔗 API URL: http://$(curl -s ifconfig.me):${API_PORT}"
+echo " 🔗 API URL: http://20.197.17.201:${API_PORT}"
 echo " 🔑 API Key: ${API_KEY}"
 echo "===================================================="
 echo " Next steps:"
-echo " 1. Access the URL above to verify the API is up."
-echo " 2. Use the API Key to create your first instance."
-echo " 3. Update your smart_irrigation .env with these values."
+echo " 1. Access http://20.197.17.201:8080/instance/connect/smart_irrigation_bot"
+echo " 2. Scan the QR code to link your phone."
+echo " 3. Backend is already pre-configured to use this."
 echo "===================================================="
