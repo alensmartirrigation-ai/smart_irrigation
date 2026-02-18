@@ -40,7 +40,7 @@ services:
       - evolution_net
 
   evolution_api:
-    image: atendimentos/evolution-api:v2.1.0
+    image: atendai/evolution-api:v2.1.1
     container_name: evolution_api
     restart: always
     ports:
