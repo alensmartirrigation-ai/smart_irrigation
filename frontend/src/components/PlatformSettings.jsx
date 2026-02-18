@@ -4,18 +4,25 @@ import { io } from 'socket.io-client';
 import { Smartphone, QrCode, Shield, RefreshCw, CheckCircle, LogOut } from 'lucide-react';
 import './PlatformSettings.css';
 
-const PlatformSettings = () => {
+const PlatformSettings = ({ selectedFarm }) => {
   const [status, setStatus] = useState('initializing');
   const [qrCode, setQrCode] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const socket = io(); // Connects to the same host by default
-
+    // Socket connection and global status fetch - runs once
+    const socket = io(); 
+    
+    // Initial fetch
     const fetchStatus = async () => {
       try {
         const response = await axios.get('/api/whatsapp/status');
-        setStatus(response.data.status);
+        // Only set initial global status if no farm is selected yet
+        // If a farm IS selected, the other useEffect will handle overwriting this shortly, 
+        // but to avoid flicker we can check here too, or just let it update global state
+        if (!selectedFarm) {
+             setStatus(response.data.status);
+        }
         setQrCode(response.data.qr);
         setLoading(false);
       } catch (err) {
@@ -27,7 +34,14 @@ const PlatformSettings = () => {
     fetchStatus();
 
     socket.on('whatsapp_status', (newStatus) => {
-      setStatus(newStatus);
+      // If we are viewing a specific farm, we generally want to trust the farm's status 
+      // BUT if the global system disconnects, the farm is effectively disconnected too.
+      // So updating status here is valid for 'disconnected' events.
+      // For 'connected' events, we might want to wait for the specific farm update event 
+      // (which comes via FarmSelector -> prop update), but seeing "Connected" globally is also good feedback.
+      if (!selectedFarm) {
+          setStatus(newStatus);
+      }
       if (newStatus === 'connected') setQrCode(null);
     });
 
@@ -39,7 +53,14 @@ const PlatformSettings = () => {
     return () => {
       socket.disconnect();
     };
-  }, []);
+  }, []); // Empty dependency array - runs once
+
+  useEffect(() => {
+    // React to selectedFarm changes
+    if (selectedFarm) {
+        setStatus(selectedFarm.connection_status || 'disconnected');
+    }
+  }, [selectedFarm]);
 
   const handleLogout = async () => {
     if (!window.confirm('Are you sure you want to logout from WhatsApp?')) return;

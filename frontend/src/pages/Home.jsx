@@ -21,6 +21,7 @@ import './Home.css';
 const Home = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('users');
+  const [selectedFarm, setSelectedFarm] = useState(null);
 
   const handleLogout = () => {
     logout();
@@ -71,7 +72,10 @@ const Home = () => {
           title="Dashboard" 
           subtitle="Welcome to the Smart Irrigation control center. Manage users, track farms, and monitor connected devices from this centralized hub."
         >
-          <FarmSelector />
+          <FarmSelector 
+            selectedFarm={selectedFarm} 
+            onSelectFarm={setSelectedFarm} 
+          />
           <div className="profile-img-placeholder">
             <User size={28} />
           </div>
@@ -86,7 +90,9 @@ const Home = () => {
             
             <div className="tab-content-container">
               {activeTab === 'users' ? <UserList /> : 
-               activeTab === 'platform-settings' ? <PlatformSettings /> : (
+               activeTab === 'platform-settings' ? (
+                 <PlatformSettings selectedFarm={selectedFarm} /> 
+               ) : (
                 <div className="tab-placeholder">
                   Displaying management interface for {activeTab}...
                 </div>

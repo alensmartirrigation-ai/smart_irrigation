@@ -198,6 +198,12 @@ const createFarm = async (name) => {
     }
 };
 
+let io = null;
+
+const setIO = (socketIo) => {
+    io = socketIo;
+};
+
 const updateFarmConnection = async (farmId, platform, status, credentials) => {
     try {
         const farm = await Farm.findByPk(farmId);
@@ -209,6 +215,11 @@ const updateFarmConnection = async (farmId, platform, status, credentials) => {
         
         await farm.save();
         logger.info('Farm connection updated', { farmId, status: farm.connection_status });
+        
+        if (io) {
+            io.emit('farm_updated', farm.toJSON());
+        }
+        
         return farm;
     } catch (error) {
         logger.error('Failed to update farm connection', { farmId, error: error.message });
@@ -245,4 +256,5 @@ module.exports = {
   queryAllFieldsHistory,
   buildRange,
   toPositiveInt,
+  setIO,
 };

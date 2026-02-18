@@ -4,15 +4,28 @@ import { Trees as Farm, ChevronDown, Plus, Activity } from 'lucide-react';
 import AddFarmModal from './AddFarmModal';
 import './FarmSelector.css';
 
-const FarmSelector = () => {
+import { io } from 'socket.io-client';
+
+const FarmSelector = ({ selectedFarm, onSelectFarm }) => {
   const [farms, setFarms] = useState([]);
-  const [selectedFarm, setSelectedFarm] = useState(null);
   const [isOpen, setIsOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const dropdownRef = useRef(null);
 
   useEffect(() => {
     fetchFarms();
+
+    const socket = io();
+    socket.on('farm_updated', (updatedFarm) => {
+        setFarms(prevFarms => prevFarms.map(farm => 
+            farm.id === updatedFarm.id ? { ...farm, ...updatedFarm } : farm
+        ));
+        
+        // Also update selected farm if it's the one that changed
+        if (selectedFarm && selectedFarm.id === updatedFarm.id) {
+            onSelectFarm(prev => ({ ...prev, ...updatedFarm }));
+        }
+    });
     
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -20,8 +33,11 @@ const FarmSelector = () => {
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+        socket.disconnect();
+    };
+  }, [selectedFarm]);
 
   const fetchFarms = async () => {
     try {
@@ -31,7 +47,7 @@ const FarmSelector = () => {
       });
       setFarms(response.data);
       if (response.data.length > 0 && !selectedFarm) {
-        setSelectedFarm(response.data[0]);
+        onSelectFarm(response.data[0]);
       }
     } catch (err) {
       console.error('Failed to fetch farms:', err);
@@ -39,9 +55,8 @@ const FarmSelector = () => {
   };
 
   const handleSelect = (farm) => {
-    setSelectedFarm(farm);
+    onSelectFarm(farm);
     setIsOpen(false);
-    // You might want to update a global state or emit an event here
   };
 
   return (
