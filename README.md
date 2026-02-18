@@ -5,8 +5,6 @@ Production-ready Node.js API that ingests IoT farm sensor data into InfluxDB, ev
 ## Stack & Features
 - Node.js (latest LTS) with Express.js and Zod validation
 - InfluxDB v2 client with `sensor_readings` and `farm_alerts` measurements in bucket `farm_sensors`
-- WhatsApp Business Cloud webhook + Axios-based sender with 24-hour rate limiting
-- OpenAI `gpt-4o-mini` (configurable) to craft human-friendly replies from pre-formatted sensor context
 - Winston + express-winston logging, centralized error handling, and modular services
 
 ## Getting Started
@@ -50,10 +48,7 @@ Production-ready Node.js API that ingests IoT farm sensor data into InfluxDB, ev
 ### GET `/api/alerts/active` (optional `farm_id` query)
 - Lists active alerts stored in `farm_alerts` measurement. Filters by `farm_id` when provided.
 
-### WhatsApp Webhook `/api/whatsapp/webhook`
-- **GET**: WhatsApp verifies the webhook via `hub.mode`, `hub.challenge`, and `hub.verify_token`. The verified token must match `WHATSAPP_VERIFY_TOKEN` in your `.env`.
-- **POST**: Receives inbound messages. Keyword check (`status` or `farm status`) triggers context lookup, GPT prompt crafting, and WhatsApp reply. The user is reminded to include the farm identifier (e.g., `status farm-01`).
-- Replies are rate-limited to 1 message per phone number per 24 hours to respect the WhatsApp 24-hour rule.
+- Validated with Zod; invalid payloads return HTTP 400. Batch ingestion is supported and flushed efficiently.
 
 ## Postman Import Notes
 1. Create an environment with variables: `baseUrl` (e.g., `http://localhost:4000`) and `farmId` (e.g., `farm-01`).
@@ -71,17 +66,6 @@ Production-ready Node.js API that ingests IoT farm sensor data into InfluxDB, ev
    - `INFLUX_ORG`
    - `INFLUX_BUCKET=farm_sensors`
 3. Measurements created automatically: `sensor_readings` (tags `farm_id`, `sensor_id`; fields `temperature`, `humidity`, `soil_moisture`) and `farm_alerts` (records threshold breaches with tags `farm_id`, `sensor_id`, `alert_type`, `status`).
-
-## WhatsApp Webhook Setup
-1. Configure WhatsApp Business Cloud using the webhook URL `<your-host>/api/whatsapp/webhook`.
-2. Provide `WHATSAPP_VERIFY_TOKEN` in `.env` and enter the same token when WhatsApp requests verification.
-3. Use `WHATSAPP_API_URL` in `.env` pointing to `https://graph.facebook.com/v21.0/PAGE_OR_PHONE_ID/messages`.
-4. On inbound `status` requests, the handler calls `/api/farm/:farmId/context`, formats the data, runs an OpenAI chat completion (prompt pre-formatted; no raw Influx rows), and sends the result. Active alerts are included in the narrative.
-5. Because WhatsApp only allows messaging a user once per 24 hours outside a session, the backend stores the timestamp of the last outbound message per `from` number and skips duplicates within 24h (logged via Winston).
-
-## OpenAI & Messaging
-- The OpenAI helper (`src/services/openaiService.js`) pulls the pre-formatted context summary and asks `gpt-4o-mini` (configurable via `OPENAI_MODEL`).
-- Responses guide the WhatsApp reply. If OpenAI fails, a fallback narrative is sent.
 
 ## Docker (optional)
 Build and run:

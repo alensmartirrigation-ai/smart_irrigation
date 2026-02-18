@@ -8,7 +8,6 @@ const {
 const logger = require('./src/utils/logger');
 const sensorRoutes = require('./src/routes/sensor.routes');
 const farmRoutes = require('./src/routes/farm.routes');
-const whatsappRoutes = require('./src/routes/whatsapp.routes');
 const irrigationRoutes = require('./src/routes/irrigation.routes');
 const errorHandler = require('./src/middleware/errorHandler');
 
@@ -30,7 +29,6 @@ app.use(
 
 app.use('/api', sensorRoutes);
 app.use('/api', farmRoutes);
-app.use('/api', whatsappRoutes);
 app.use('/api', irrigationRoutes);
 
 app.get('/', (req, res) => res.json({ status: 'ok' }));
