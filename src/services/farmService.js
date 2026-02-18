@@ -1,7 +1,4 @@
-const {
-  influxQueryApi,
-  influxBucket,
-} = require('../config/influxClient');
+const { influxQueryApi, influxBucket } = require('../config/influxClient');
 const logger = require('../utils/logger');
 const { getActiveAlerts } = require('./alertService');
 
@@ -15,11 +12,18 @@ const sanitizeId = (value) => {
   return value;
 };
 
+const toPositiveInt = (value, fallback, max = 500) => {
+  const parsed = Number.parseInt(value, 10);
+  if (Number.isNaN(parsed) || parsed <= 0) {
+    return fallback;
+  }
+  return Math.min(parsed, max);
+};
+
 const runFluxQuery = async (query) => influxQueryApi.collectRows(query);
 
-const buildRange = (start, stop) => {
-  const actualStop = stop || '24h';
-  return `|> range(start: ${start}, stop: ${actualStop})`;
+const buildRange = (start, stop = 'now()') => {
+  return `|> range(start: ${start}, stop: ${stop})`;
 };
 
 const queryMean = async (farmId, field, rangeClause) => {
@@ -36,7 +40,7 @@ from(bucket: "${influxBucket}")
 const queryLatest = async (farmId, field) => {
   const query = `
 from(bucket: "${influxBucket}")
-  |> range(start: -30d, stop: 24h)
+  |> range(start: -30d)
   |> filter(fn: (r) => r["_measurement"] == "sensor_readings" and r["farm_id"] == "${farmId}" and r["_field"] == "${field}")
   |> last()
 `;
@@ -59,7 +63,9 @@ from(bucket: "${influxBucket}")
   |> ${type}()
 `;
   const [row] = await runFluxQuery(query);
-  if (!row) return null;
+  if (!row) {
+    return null;
+  }
   return {
     value: typeof row._value === 'number' ? Number(row._value.toFixed(2)) : row._value,
     timestamp: row._time,
@@ -67,12 +73,13 @@ from(bucket: "${influxBucket}")
 };
 
 const queryHistory = async (farmId, field, rangeClause, limit = 20) => {
+  const safeLimit = toPositiveInt(limit, 20, 500);
   const query = `
 from(bucket: "${influxBucket}")
   ${rangeClause}
   |> filter(fn: (r) => r["_measurement"] == "sensor_readings" and r["farm_id"] == "${farmId}" and r["_field"] == "${field}")
   |> sort(columns: ["_time"], desc: true)
-  |> limit(n: ${limit})
+  |> limit(n: ${safeLimit})
 `;
   const rows = await runFluxQuery(query);
   return rows.map((row) => ({
@@ -81,15 +88,29 @@ from(bucket: "${influxBucket}")
   }));
 };
 
+const parseDurationWindow = (window) => {
+  const match = /^([0-9]+)([smhdw])$/.exec(window);
+  if (!match) {
+    return null;
+  }
+  const amount = Number.parseInt(match[1], 10);
+  return {
+    amount,
+    unit: match[2],
+    full: `${amount}${match[2]}`,
+  };
+};
+
 const computeTrendAdvanced = async (farmId, field, window = '6h') => {
-  const recent = await queryMean(farmId, field, buildRange(`-${window}`));
-  // Previous window is from -(2 * window) to -(window)
-  // For simplicity with InfluxDB duration strings like '6h', we'll rely on the caller passing correct formats
-  // or handle basic conversion if needed. For now, we'll build the range manually.
-  const stop = `-${window}`;
-  const start = `-${parseInt(window) * 2}${window.replace(/[0-9]/g, '')}`;
-  
-  const earlier = await queryMean(farmId, field, buildRange(start, stop));
+  const normalized = parseDurationWindow(window);
+  if (!normalized) {
+    return 'stable';
+  }
+
+  const recent = await queryMean(farmId, field, buildRange(`-${normalized.full}`));
+  const earlierStart = `-${normalized.amount * 2}${normalized.unit}`;
+  const earlierStop = `-${normalized.full}`;
+  const earlier = await queryMean(farmId, field, buildRange(earlierStart, earlierStop));
 
   if (recent === null || earlier === null) {
     return 'stable';
@@ -131,14 +152,16 @@ const getFarmContext = async (rawFarmId) => {
   };
 };
 
-const queryAllFieldsHistory = async (farmId, rangeClause, limit = 50) => {
+const queryAllFieldsHistory = async (rawFarmId, rangeClause, limit = 50) => {
+  const farmId = sanitizeId(rawFarmId);
+  const safeLimit = toPositiveInt(limit, 50, 1000);
   const query = `
 from(bucket: "${influxBucket}")
   ${rangeClause}
   |> filter(fn: (r) => r["_measurement"] == "sensor_readings" and r["farm_id"] == "${farmId}")
   |> pivot(rowKey:["_time", "sensor_id"], columnKey:["_field"], valueColumn:"_value")
   |> sort(columns: ["_time"], desc: true)
-  |> limit(n: ${limit})
+  |> limit(n: ${safeLimit})
 `;
   const rows = await runFluxQuery(query);
   return rows.map((row) => ({
@@ -161,4 +184,5 @@ module.exports = {
   queryHistory,
   queryAllFieldsHistory,
   buildRange,
+  toPositiveInt,
 };

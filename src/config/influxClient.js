@@ -1,23 +1,17 @@
 const { InfluxDB } = require('@influxdata/influxdb-client');
+const env = require('./env');
 
-const {
-  INFLUX_URL,
-  INFLUX_TOKEN,
-  INFLUX_ORG,
-  INFLUX_BUCKET,
-} = process.env;
+const client = new InfluxDB({
+  url: env.INFLUX_URL,
+  token: env.INFLUX_TOKEN,
+});
 
-if (!INFLUX_URL || !INFLUX_TOKEN || !INFLUX_ORG || !INFLUX_BUCKET) {
-  throw new Error('InfluxDB configuration is required in environment variables.');
-}
-
-const client = new InfluxDB({ url: INFLUX_URL, token: INFLUX_TOKEN });
-const writeApi = client.getWriteApi(INFLUX_ORG, INFLUX_BUCKET, 'ms');
-const queryApi = client.getQueryApi(INFLUX_ORG);
+const writeApi = client.getWriteApi(env.INFLUX_ORG, env.INFLUX_BUCKET, 'ms');
+const queryApi = client.getQueryApi(env.INFLUX_ORG);
 
 module.exports = {
   influxClient: client,
   influxWriteApi: writeApi,
   influxQueryApi: queryApi,
-  influxBucket: INFLUX_BUCKET,
+  influxBucket: env.INFLUX_BUCKET,
 };

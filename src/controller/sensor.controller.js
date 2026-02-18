@@ -1,5 +1,5 @@
 const { ingestReadings } = require('../services/sensorService');
-const { queryAllFieldsHistory, buildRange } = require('../services/farmService');
+const { queryAllFieldsHistory, buildRange, toPositiveInt } = require('../services/farmService');
 const asyncHandler = require('../utils/asyncHandler');
 
 exports.ingest = asyncHandler(async (req, res) => {
@@ -13,9 +13,9 @@ exports.getByFarmId = asyncHandler(async (req, res) => {
   const { farmId } = req.params;
   const { period, limit } = req.query;
   const history = await queryAllFieldsHistory(
-    farmId, 
-    buildRange(period || '-24h'), 
-    limit ? parseInt(limit) : 50
+    farmId,
+    buildRange(period || '-24h'),
+    toPositiveInt(limit, 50, 1000)
   );
   res.json(history);
 });

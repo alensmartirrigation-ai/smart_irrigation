@@ -1,18 +1,25 @@
 {
   "name": "smart_irrigation",
-  "version": "1.0.0",
-  "description": "Production-ready Node.js backend for collecting IoT farm sensor data and integrating with WhatsApp and OpenAI.",
-  "main": "server.js",
+  "version": "2.0.0",
+  "description": "Enterprise-grade Node.js backend for smart irrigation telemetry and alerting.",
+  "main": "src/index.js",
   "type": "commonjs",
+  "private": true,
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "scripts": {
-    "start": "node server.js",
-    "dev": "NODE_ENV=development nodemon server.js"
+    "start": "node src/index.js",
+    "dev": "NODE_ENV=development nodemon src/index.js",
+    "test": "node --test",
+    "test:smoke": "node --check src/index.js && node --check src/app.js",
+    "verify": "npm run test:smoke && npm run test"
   },
   "keywords": [
     "iot",
     "influxdb",
-    "whatsapp",
-    "openai"
+    "smart-irrigation",
+    "express"
   ],
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

@@ -1,0 +1,9 @@
+.git
+.github
+.vscode
+node_modules
+npm-debug.log
+.env
+.env.*
+*.md
+Smart_Irrigation_API.postman_collection.json
