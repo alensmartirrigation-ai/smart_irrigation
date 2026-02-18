@@ -91,7 +91,7 @@ const Home = () => {
                 borderRadius: '20px',
                 display: 'flex',
                 alignItems: 'center',
-                justify-content: 'center',
+                justifyContent: 'center',
                 color: 'var(--nm-text-light)'
               }}>
                 Displaying management interface for {activeTab}...
