@@ -16,6 +16,7 @@ import FarmList from '../components/FarmList';
 import DashboardHeader from '../components/DashboardHeader';
 import FarmSelector from '../components/FarmSelector';
 import PlatformSettings from '../components/PlatformSettings';
+import DeviceList from '../components/DeviceList';
 import './Home.css';
 
 const Home = () => {
@@ -90,6 +91,7 @@ const Home = () => {
             
             <div className="tab-content-container">
               {activeTab === 'users' ? <UserList /> : 
+               activeTab === 'devices' ? <DeviceList selectedFarm={selectedFarm} /> :
                activeTab === 'platform-settings' ? (
                  <PlatformSettings selectedFarm={selectedFarm} /> 
                ) : (

@@ -8,6 +8,7 @@ const whatsappRoutes = require('./routes/whatsapp.routes');
 const userRoutes = require('./routes/user.routes');
 const aiRoutes = require('./routes/ai.routes');
 const authRoutes = require('./routes/auth.routes');
+const deviceRoutes = require('./routes/device.routes');
 const errorHandler = require('./middleware/errorHandler');
 const path = require('path');
 
@@ -52,6 +53,7 @@ app.use('/api', irrigationRoutes);
 app.use('/api', whatsappRoutes);
 app.use('/api', userRoutes);
 app.use('/api', aiRoutes);
+app.use('/api', deviceRoutes);
 
 // Protect sensitive routes (simple middleware for now)
 app.use('/api/admin', (req, res, next) => {

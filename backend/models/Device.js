@@ -31,6 +31,7 @@ const Device = sequelize.define('Device', {
 Device.associate = (models) => {
   Device.belongsToMany(models.Farm, { through: models.FarmDevice, foreignKey: 'device_id' });
   Device.hasOne(models.DeviceIrrigationStatus, { foreignKey: 'device_id', onDelete: 'CASCADE' });
+  Device.hasMany(models.DeviceReading, { foreignKey: 'device_id', onDelete: 'CASCADE' });
 };
 
 module.exports = Device;
