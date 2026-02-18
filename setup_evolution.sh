@@ -59,9 +59,20 @@ services:
       - SERVER_URL=http://20.197.17.201:${API_PORT}
       - AUTHENTICATION_TYPE=apikey
       - AUTHENTICATION_API_KEY=${API_KEY}
-      - NODE_OPTIONS=--max-old-space-size=4096
-      - DATABASE_ENABLED=false
-      - CACHE_REDIS_ENABLED=false
+      - NODE_OPTIONS=--max-old-space-size=4096 --network-family-autoselection-attempt-timeout=10000
+      - DATABASE_ENABLED=true
+      - DATABASE_SAVE_DATA_INSTANCE=true
+      - DATABASE_PROVIDER=postgresql
+      - DATABASE_CONNECTION_URI=postgresql://evolution:${DB_PASS}@evolution_db:5432/evolution?schema=public
+      - DATABASE_CONNECTION_CLIENT_NAME=evolution_api
+      - RECONNECT_SESSION_ON_CLOSE=false
+      - CLEAN_PRISMA_CACHE_ON_START=true
+      - CACHE_REDIS_ENABLED=true
+      - CACHE_REDIS_URI=redis://evolution_redis:6379
+      - CACHE_REDIS_PREFIX=EVO
+      - TZ=Etc/UTC
+      - CONFIG_SESSION_PHONE_VERSION=2.3000.1015901307
+      - DELAYS_SEND_MESSAGE=1000
     depends_on:
       - evolution_db
       - evolution_redis
