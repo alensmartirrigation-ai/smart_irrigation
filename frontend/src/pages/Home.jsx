@@ -1,11 +1,35 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
-import { Sprout } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Sprout, LogOut } from 'lucide-react';
+import { logout } from '../utils/auth';
 
 const Home = () => {
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
   return (
     <div className="whatsapp-container" style={{ textAlign: 'center' }}>
-      <header className="main-header">
+      <header className="main-header" style={{ position: 'relative' }}>
+        <button 
+            onClick={handleLogout}
+            className="btn btn-secondary"
+            style={{ 
+                position: 'absolute', 
+                top: 0, 
+                right: 0, 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '0.5rem',
+                fontSize: '0.9rem',
+                padding: '0.5rem 1rem'
+            }}
+        >
+            <LogOut size={16} /> Logout
+        </button>
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
             <Sprout size={64} className="text-green-500" />
         </div>
