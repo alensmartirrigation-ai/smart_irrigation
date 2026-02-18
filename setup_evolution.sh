@@ -70,10 +70,7 @@ services:
       - CACHE_REDIS_URI=redis://evolution_redis:6379
       - CACHE_REDIS_PREFIX=EVO
       - TZ=Etc/UTC
-      - TZ=Etc/UTC
       - CONFIG_SESSION_PHONE_VERSION=2.3000.1015901307
-      - CACHE_REDIS_URI=redis://evolution_redis:6379
-      - CACHE_REDIS_PREFIX=EVO
       - DELAYS_SEND_MESSAGE=1000
     depends_on:
       - evolution_db
