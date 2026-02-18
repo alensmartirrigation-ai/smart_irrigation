@@ -35,13 +35,7 @@ exports.verifyWebhook = (req, res) => {
 exports.handleWebhook = asyncHandler(async (req, res) => {
   const { From, To, Body, MessageSid } = req.body;
 
-  logger.info('WhatsApp Webhook Received', {
-    from: From,
-    to: To,
-    body: Body,
-    messageSid: MessageSid,
-    timestamp: new Date().toISOString(),
-  });
+  logger.info(`WhatsApp Webhook Received: ${From}: "${Body}"`);
 
   if (!Body || !From) {
     return res.status(200).send('<Response></Response>');
@@ -56,7 +50,7 @@ exports.handleWebhook = asyncHandler(async (req, res) => {
     reply = 'Sorry, something went wrong. Please try again.';
   }
 
-  logger.info('WhatsApp Reply', { reply });
+  logger.info(`WhatsApp Reply: "${reply}"`);
 
   await sendWhatsAppMessage(From, reply);
 
