@@ -52,12 +52,14 @@ services:
     container_name: evolution_api
     restart: always
     shm_size: '2gb'
+    ipc: host
     ports:
       - "${API_PORT}:8080"
     environment:
       - SERVER_URL=http://20.197.17.201:${API_PORT}
       - AUTHENTICATION_TYPE=apikey
       - AUTHENTICATION_API_KEY=${API_KEY}
+      - NODE_OPTIONS=--max-old-space-size=4096
       - DATABASE_ENABLED=true
       - DATABASE_PROVIDER=postgresql
       - DATABASE_CONNECTION_URI=postgresql://evolution:${DB_PASS}@evolution_db:5432/evolution?schema=public
