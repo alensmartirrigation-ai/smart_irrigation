@@ -11,8 +11,10 @@ class UserService {
 
   async init() {
     try {
-      await sequelize.authenticate();
-      logger.info('Database connection established successfully.');
+      if (sequelize.authenticate) {
+        await sequelize.authenticate();
+        logger.info('Database connection established successfully.');
+      }
 
       // Sync models
       await sequelize.sync({ alter: true });
@@ -35,7 +37,7 @@ class UserService {
       const normalizedPhone = config.admin.phone.replace(/\D/g, '');
 
       const existingAdmin = await User.findOne({
-        where: { phone: normalizedPhone }
+        where: { role: 'admin' }
       });
 
       if (!existingAdmin) {
@@ -54,6 +56,49 @@ class UserService {
 
     } catch (error) {
       logger.error('Failed to seed admin', { error: error.message });
+    }
+  }
+
+  async getAdminInfo() {
+    try {
+      const admin = await User.findOne({
+        where: { role: 'admin' },
+        attributes: { exclude: ['password'] }
+      });
+      return admin ? admin.toJSON() : null;
+    } catch (error) {
+      logger.error('Failed to get admin info', { error: error.message });
+      throw error;
+    }
+  }
+
+  async saveAdminInfo(details) {
+    try {
+      const admin = await User.findOne({ where: { role: 'admin' } });
+      if (!admin) {
+        throw new Error('Admin account not found');
+      }
+
+      const { name, phone, username, password } = details;
+      if (name) admin.name = name;
+      
+      if (phone) {
+        const normalizedPhone = phone.replace(/\D/g, '');
+        admin.phone = normalizedPhone;
+      }
+      
+      if (username) admin.username = username;
+      
+      if (password) {
+        admin.password = await bcrypt.hash(password, SALT_ROUNDS);
+      }
+
+      await admin.save();
+      const { password: _, ...adminInfo } = admin.toJSON();
+      return adminInfo;
+    } catch (error) {
+      logger.error('Failed to save admin info', { error: error.message });
+      throw error;
     }
   }
 
