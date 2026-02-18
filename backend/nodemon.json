@@ -1,0 +1,12 @@
+{
+  "ignore": [
+    "auth_info_baileys/*",
+    "node_modules/*",
+    "public/*",
+    "frontend/*",
+    "data/*",
+    "*.log",
+    ".git/*"
+  ],
+  "ext": "js,json"
+}

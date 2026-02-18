@@ -1,12 +1,19 @@
 import React from 'react';
-import WhatsAppManager from './components/WhatsAppManager.jsx';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import Home from './pages/Home';
+import AdminOnboarding from './pages/AdminOnboarding';
 import './App.css';
 
 function App() {
   return (
-    <div className="App">
-      <WhatsAppManager />
-    </div>
+    <Router>
+      <div className="App">
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/admin/onboarding" element={<AdminOnboarding />} />
+        </Routes>
+      </div>
+    </Router>
   );
 }
 

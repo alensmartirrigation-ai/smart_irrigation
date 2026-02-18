@@ -77,11 +77,7 @@ const WhatsAppManager = () => {
   };
 
   return (
-    <div className="whatsapp-container">
-      <header className="main-header">
-        <h1>WhatsApp Integration</h1>
-        <p>Connect your account to enable irrigation alerts and monitoring.</p>
-      </header>
+    <div className="whatsapp-manager">
 
       <div className="card-container">
         <div className="card glass-card main-card">
