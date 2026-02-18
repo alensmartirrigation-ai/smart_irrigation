@@ -57,10 +57,11 @@ services:
       - "${API_PORT}:8080"
     environment:
       - SERVER_URL=http://20.197.17.201:${API_PORT}
-      - AUTHENTICATION_TYPE=apikey
+      - AUTHENTICATION_TYPE=none
       - AUTHENTICATION_API_KEY=${API_KEY}
       - NODE_OPTIONS=--max-old-space-size=4096
       - DATABASE_ENABLED=true
+      - DATABASE_SAVE_DATA_INSTANCE=true
       - DATABASE_PROVIDER=postgresql
       - DATABASE_CONNECTION_URI=postgresql://evolution:${DB_PASS}@evolution_db:5432/evolution?schema=public
       - DATABASE_CONNECTION_CLIENT_NAME=evolution_api
