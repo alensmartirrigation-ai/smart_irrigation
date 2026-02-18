@@ -4,9 +4,9 @@ const userService = require('../services/userService');
 const logger = require('../utils/logger');
 
 // Get Admin Info
-router.get('/admin/info', (req, res) => {
+router.get('/admin/info', async (req, res) => {
   try {
-    const info = userService.getAdminInfo();
+    const info = await userService.getAdminInfo();
     res.json(info);
   } catch (error) {
     logger.error('Failed to get admin info', { error: error.message });
@@ -15,13 +15,13 @@ router.get('/admin/info', (req, res) => {
 });
 
 // Update Admin Info
-router.post('/admin/setup', (req, res) => {
+router.post('/admin/setup', async (req, res) => {
   try {
     const { name, farmName } = req.body;
     if (!name || !farmName) {
       return res.status(400).json({ error: 'Name and Farm Name are required' });
     }
-    const info = userService.saveAdminInfo(name, farmName);
+    const info = await userService.saveAdminInfo(name, farmName);
     logger.info('Admin info updated', { name, farmName });
     res.json({ message: 'Admin info saved successfully', info });
   } catch (error) {
@@ -31,9 +31,9 @@ router.post('/admin/setup', (req, res) => {
 });
 
 // Get Users
-router.get('/users', (req, res) => {
+router.get('/users', async (req, res) => {
   try {
-    const users = userService.getUsers();
+    const users = await userService.getUsers();
     res.json(users);
   } catch (error) {
     logger.error('Failed to get users', { error: error.message });
@@ -42,13 +42,13 @@ router.get('/users', (req, res) => {
 });
 
 // Add User
-router.post('/users', (req, res) => {
+router.post('/users', async (req, res) => {
   try {
     const { name, phone } = req.body;
     if (!name || !phone) {
       return res.status(400).json({ error: 'Name and Phone are required' });
     }
-    const newUser = userService.addUser(name, phone);
+    const newUser = await userService.addUser(name, phone);
     logger.info('User added', { name, phone });
     res.status(201).json({ message: 'User added successfully', user: newUser });
   } catch (error) {

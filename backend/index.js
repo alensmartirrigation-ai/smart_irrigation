@@ -7,6 +7,7 @@ const env = require('./config/env');
 const { influxWriteApi } = require('./config/influxClient');
 const { Server } = require('socket.io');
 const whatsappService = require('./services/whatsapp.service');
+const userService = require('./services/userService');
 const logger = require('./utils/logger');
 
 const server = app.listen(env.PORT, async () => {
@@ -20,6 +21,7 @@ const server = app.listen(env.PORT, async () => {
   });
 
   whatsappService.setIO(io);
+  await userService.init();
   await whatsappService.init();
 
   io.on('connection', (socket) => {

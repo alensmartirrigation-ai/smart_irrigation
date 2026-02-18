@@ -1,183 +1,172 @@
-const fs = require('fs');
-const path = require('path');
+const User = require('../models/User');
+const sequelize = require('../utils/database');
 const logger = require('../utils/logger');
 const config = require('../config/default');
 
-const DATA_FILE = path.join(process.cwd(), 'src', 'data', 'users.json');
-
 class UserService {
-  constructor() {
-    this.data = {
-      admin: { name: 'Admin', farmName: 'My Farm', password: 'admin' },
-      users: []
-    };
-    this.loadData();
-    this.seedAdmin();
-  }
+  constructor() {}
 
-  loadData() {
+  async init() {
     try {
-      if (fs.existsSync(DATA_FILE)) {
-        const fileContent = fs.readFileSync(DATA_FILE, 'utf-8');
-        const loadedData = JSON.parse(fileContent);
-        
-        // Migration: If 'admin' key exists and is separate, map it to users array if not already there
-        if (loadedData.admin && !Array.isArray(loadedData.users)) {
-             this.data = { users: [] }; // Reset structure
-             // We will handle migration in seedAdmin or here. 
-             // Let's keep it simple: If structure is old, we adapt it.
-        }
-        
-        // If loaded data has the new structure (just users array or users key), use it
-        if (loadedData.users) {
-            this.data.users = loadedData.users;
-        } 
-        
-        // Handle legacy: if it had admin object but no users array or separate
-        if (loadedData.admin && !this.data.users.find(u => u.role === 'admin')) {
-             const legacyAdmin = loadedData.admin;
-             this.data.users.push({
-                 id: 'admin-legacy',
-                 name: legacyAdmin.name || 'Admin',
-                 farmName: legacyAdmin.farmName || 'My Farm',
-                 role: 'admin',
-                 username: 'admin',
-                 password: legacyAdmin.password || 'admin',
-                 whatsapp: legacyAdmin.whatsapp
-             });
-        }
-      } else {
-        this.saveData(); // Create initial file
-      }
+      await sequelize.authenticate();
+      logger.info('Database connection established successfully.');
+      
+      // Sync models
+      await sequelize.sync({ alter: true });
+      logger.info('Database models synchronized.');
+
+      await this.seedAdmin();
     } catch (error) {
-      logger.error('Failed to load user data', { error: error.message });
-      // Initialize if failed
-      this.data.users = [];
+      logger.error('Unable to connect to the database:', { error: error.message });
+      throw error;
     }
   }
 
-  seedAdmin() {
-      // Check if any admin exists
-      const adminExists = this.data.users.some(u => u.role === 'admin');
-      if (!adminExists) {
-          this.data.users.push({
-              id: 'default-admin',
-              name: config.admin.name,
-              username: config.admin.username,
-              password: config.admin.password,
-              role: 'admin',
-              farmName: config.admin.farmName,
-              whatsapp: {
-                  jid: '',
-                  name: '',
-                  connectedAt: null
-              },
-              createdAt: new Date().toISOString()
-          });
-          this.saveData();
-          logger.info('Default admin user seeded');
-      }
-  }
-
-  saveData() {
+  async seedAdmin() {
     try {
-      // Ensure directory exists
-      const dir = path.dirname(DATA_FILE);
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
+      const adminCount = await User.count({ where: { role: 'admin' } });
+      if (adminCount === 0) {
+        await User.create({
+          name: config.admin.name,
+          username: config.admin.username,
+          password: config.admin.password,
+          role: 'admin',
+          farmName: config.admin.farmName,
+          whatsapp: {
+            jid: '',
+            name: '',
+            connectedAt: null
+          }
+        });
+        logger.info('Default admin user seeded in PostgreSQL');
       }
-      // Save only the users array wrapped in object if we want to keep extensibility, or matches legacy check
-      fs.writeFileSync(DATA_FILE, JSON.stringify({ users: this.data.users }, null, 2));
     } catch (error) {
-      logger.error('Failed to save user data', { error: error.message });
+      logger.error('Failed to seed admin user', { error: error.message });
     }
   }
 
-  saveAdminInfo(name, farmName) {
-    const admin = this.getAdminInfo();
-    if (admin) {
+  async getAdminInfo() {
+    try {
+      const admin = await User.findOne({ 
+        where: { role: 'admin' },
+        attributes: { exclude: ['password'] }
+      });
+      return admin ? admin.toJSON() : null;
+    } catch (error) {
+      logger.error('Failed to get admin info', { error: error.message });
+      return null;
+    }
+  }
+
+  async saveAdminInfo(name, farmName) {
+    try {
+      const admin = await User.findOne({ where: { role: 'admin' } });
+      if (admin) {
         admin.name = name;
         admin.farmName = farmName;
-        this.saveData();
-        return admin;
+        await admin.save();
+        const { password, ...adminInfo } = admin.toJSON();
+        return adminInfo;
+      }
+      return null;
+    } catch (error) {
+      logger.error('Failed to save admin info', { error: error.message });
+      return null;
     }
-    return null;
   }
 
-  updateAdminWhatsAppDetails(jid, platformName) {
-    const admin = this.getAdminInfo();
-    if (admin) {
+  async updateAdminWhatsAppDetails(jid, platformName) {
+    try {
+      const admin = await User.findOne({ where: { role: 'admin' } });
+      if (admin) {
         admin.whatsapp = {
-            jid,
-            name: platformName || 'Unknown',
-            connectedAt: new Date().toISOString()
+          jid,
+          name: platformName || 'Unknown',
+          connectedAt: new Date().toISOString()
         };
-        this.saveData();
-        logger.info('Admin WhatsApp details updated', { jid });
+        await admin.save();
+        logger.info('Admin WhatsApp details updated in PostgreSQL', { jid });
+      }
+    } catch (error) {
+      logger.error('Failed to update admin WhatsApp details', { error: error.message });
     }
   }
 
-  getAdminInfo() {
-    // Return first admin found
-    const admin = this.data.users.find(u => u.role === 'admin');
-    if (!admin) return null;
-    
-    // Return admin info without password
-    const { password, ...adminInfo } = admin;
-    return adminInfo;
-  }
+  async authenticate(username, password) {
+    try {
+      const user = await User.findOne({
+        where: {
+          [sequelize.Sequelize.Op.or]: [
+            { username: username },
+            { phone: username }
+          ]
+        }
+      });
 
-  authenticate(username, password) {
-    const user = this.data.users.find(u => u.username === username || u.phone === username); // Allow login by phone too if needed
-    
-    if (user && user.password === password) {
-      const { password, ...userInfo } = user;
-      return userInfo;
+      if (user && user.password === password) {
+        const { password, ...userInfo } = user.toJSON();
+        return userInfo;
+      }
+      return null;
+    } catch (error) {
+      logger.error('Authentication failed', { error: error.message });
+      return null;
     }
-    return null;
   }
 
-  updatePassword(username, newPassword) {
-     const user = this.data.users.find(u => u.username === username);
-     if (user) {
-         user.password = newPassword;
-         this.saveData();
-         return true;
-     }
-     return false;
-  }
-
-  addUser(name, phone) {
-    if (!name || !phone) {
-      throw new Error('Name and phone are required');
+  async updatePassword(username, newPassword) {
+    try {
+      const user = await User.findOne({ where: { username } });
+      if (user) {
+        user.password = newPassword;
+        await user.save();
+        return true;
+      }
+      return false;
+    } catch (error) {
+      logger.error('Failed to update password', { error: error.message });
+      return false;
     }
-    
-    // Normalize phone (remove non-digits)
-    const normalizedPhone = phone.replace(/\D/g, '');
-    
-    // Check if user already exists
-    const exists = this.data.users.find(u => u.phone === normalizedPhone);
-    if (exists) {
+  }
+
+  async addUser(name, phone) {
+    try {
+      if (!name || !phone) {
+        throw new Error('Name and phone are required');
+      }
+
+      const normalizedPhone = phone.replace(/\D/g, '');
+
+      const exists = await User.findOne({ where: { phone: normalizedPhone } });
+      if (exists) {
         throw new Error('User with this phone number already exists');
-    }
+      }
 
-    const newUser = {
-      id: Date.now().toString(),
-      name,
-      phone: normalizedPhone,
-      role: 'user', // Default role
-      username: normalizedPhone, // Use phone as username for regular users by default
-      password: normalizedPhone, // Default password is phone number (insecure, but matches 'simple' requirement context)
-      createdAt: new Date().toISOString()
-    };
-    
-    this.data.users.push(newUser);
-    this.saveData();
-    return newUser;
+      const newUser = await User.create({
+        name,
+        phone: normalizedPhone,
+        role: 'user',
+        username: normalizedPhone,
+        password: normalizedPhone
+      });
+
+      return newUser.toJSON();
+    } catch (error) {
+      logger.error('Failed to add user', { error: error.message });
+      throw error;
+    }
   }
 
-  getUsers() {
-    return this.data.users;
+  async getUsers() {
+    try {
+      const users = await User.findAll({
+        attributes: { exclude: ['password'] }
+      });
+      return users.map(u => u.toJSON());
+    } catch (error) {
+      logger.error('Failed to get users', { error: error.message });
+      return [];
+    }
   }
 }
 

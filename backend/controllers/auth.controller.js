@@ -1,11 +1,11 @@
 const userService = require('../services/userService');
 const logger = require('../utils/logger');
 
-exports.login = (req, res) => {
+exports.login = async (req, res) => {
   try {
     const { username, password } = req.body;
     
-    const user = userService.authenticate(username, password);
+    const user = await userService.authenticate(username, password);
 
     if (!user) {
       logger.warn('Failed login attempt', { username });

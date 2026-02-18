@@ -105,7 +105,7 @@ class WhatsAppService {
         if (this.sock?.user) {
             const { id, name } = this.sock.user;
             const jid = id.split(':')[0] + '@s.whatsapp.net'; // Normalized JID
-            userService.updateAdminWhatsAppDetails(jid, name);
+            await userService.updateAdminWhatsAppDetails(jid, name);
         }
 
         if (this.io) {
