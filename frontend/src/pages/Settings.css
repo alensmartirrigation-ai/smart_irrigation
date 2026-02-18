@@ -12,12 +12,12 @@
   background-color: var(--nm-bg);
   color: var(--nm-text);
   padding: 40px;
-  font-family: 'Inter', sans-serif;
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
 .settings-header {
-  max-width: 1000px;
-  margin: 0 auto 60px;
+  margin-bottom: 40px;
   display: flex;
   align-items: center;
   gap: 32px;
@@ -50,103 +50,165 @@
   transform: translateY(1px);
 }
 
-.settings-container {
-  max-width: 1000px;
-  margin: 0 auto;
+.settings-split-container {
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  gap: 40px;
+  align-items: start;
 }
 
-.settings-section {
-  margin-bottom: 64px;
+.neumorphic-panel {
+  background: var(--nm-bg);
+  border-radius: 40px;
+  box-shadow: 20px 20px 60px var(--nm-shadow),
+              -20px -20px 60px var(--nm-light);
+  padding: 40px;
 }
 
-.section-header {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 12px;
-}
-
-.section-icon {
-  color: var(--nm-accent);
-}
-
-.section-header h2 {
-  font-size: 24px;
-  font-weight: 700;
-}
-
-.section-description {
-  font-size: 16px;
-  color: var(--nm-text-light);
+.panel-header {
   margin-bottom: 32px;
 }
 
-.neumorphic-card {
-  padding: 40px;
-  border-radius: 40px;
-  background: var(--nm-bg);
-  box-shadow: 20px 20px 60px var(--nm-shadow),
-              -20px -20px 60px var(--nm-light);
+.panel-header h3 {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--nm-text);
 }
 
-.integration-card {
+.platform-list {
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: 24px;
 }
 
-.integration-info h3 {
-  font-size: 22px;
+.platform-item {
+  display: flex;
+  gap: 16px;
+  padding: 20px;
+  border-radius: 25px;
+  cursor: pointer;
+  background: var(--nm-bg);
+  box-shadow: 6px 6px 12px var(--nm-shadow),
+              -6px -6px 12px var(--nm-light);
+  transition: all 0.2s ease;
+}
+
+.platform-item:hover:not(.disabled) {
+  box-shadow: 3px 3px 6px var(--nm-shadow),
+              -3px -3px 6px var(--nm-light);
+  transform: translateY(1px);
+}
+
+.platform-item.active {
+  box-shadow: inset 6px 6px 12px var(--nm-shadow),
+              inset -6px -6px 12px var(--nm-light);
+}
+
+.platform-item.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+  background: rgba(0,0,0,0.02);
+}
+
+.platform-icon-wrapper {
+  width: 50px;
+  height: 50px;
+  border-radius: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--nm-bg);
+  box-shadow: 4px 4px 8px var(--nm-shadow),
+              -4px -4px 8px var(--nm-light);
+  color: var(--nm-accent);
+}
+
+.platform-info h4 {
+  font-size: 17px;
   font-weight: 700;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
 
-.integration-info p {
+.platform-info p {
+  font-size: 13px;
+  color: var(--nm-text-light);
+}
+
+.status-tag {
+  font-size: 10px;
+  padding: 4px 8px;
+  border-radius: 10px;
+  background: var(--nm-bg);
+  box-shadow: inset 2px 2px 4px var(--nm-shadow),
+              inset -2px -2px 4px var(--nm-light);
+  color: var(--nm-accent);
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-left: 8px;
+}
+
+.platform-name-row {
+  display: flex;
+  align-items: center;
+}
+
+/* Detail Panel */
+.detail-header {
+  margin-bottom: 40px;
+}
+
+.header-title {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.header-title h2 {
+  font-size: 26px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.header-title p {
   font-size: 15px;
   color: var(--nm-text-light);
 }
 
-/* Override WhatsAppManager styles for Neumorphism compatibility */
-.whatsapp-manager .card {
-  background: transparent !important;
+.empty-detail {
+  height: 400px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  color: var(--nm-text-light);
+}
+
+/* WhatsApp Manager Overrides for Neumorphism */
+.whatsapp-manager .card-container {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 32px !important;
+}
+
+.whatsapp-manager .glass-card {
+  background: var(--nm-bg) !important;
   box-shadow: none !important;
+  padding: 32px !important;
+  border-radius: 30px !important;
   border: none !important;
-  padding: 0 !important;
 }
 
 .whatsapp-manager .qr-wrapper {
   background: var(--nm-bg) !important;
-  box-shadow: inset 6px 6px 12px var(--nm-shadow),
-              inset -6px -6px 12px var(--nm-light) !important;
-  border-radius: 24px !important;
+  box-shadow: inset 8px 8px 16px var(--nm-shadow),
+              inset -8px -8px 16px var(--nm-light) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 25px !important;
   padding: 24px !important;
-}
-
-.whatsapp-manager .btn-primary {
-  background: var(--nm-bg) !important;
-  box-shadow: 8px 8px 16px var(--nm-shadow),
-              -8px -8px 16px var(--nm-light) !important;
-  color: var(--nm-accent) !important;
-  border-radius: 16px !important;
-  font-weight: 700 !important;
-}
-
-.whatsapp-manager .btn-danger {
-  background: var(--nm-bg) !important;
-  box-shadow: 8px 8px 16px var(--nm-shadow),
-              -8px -8px 16px var(--nm-light) !important;
-  color: #ef4444 !important;
-  border-radius: 16px !important;
-  font-weight: 700 !important;
-}
-
-.whatsapp-manager input, .whatsapp-manager textarea {
-  background: var(--nm-bg) !important;
-  box-shadow: inset 4px 4px 8px var(--nm-shadow),
-              inset -4px -4px 8px var(--nm-light) !important;
-  border: none !important;
-  border-radius: 12px !important;
-  color: var(--nm-text) !important;
 }
 
 .whatsapp-manager .status-badge {
@@ -155,17 +217,45 @@
               -4px -4px 8px var(--nm-light) !important;
   color: var(--nm-text) !important;
   border: none !important;
+  margin-bottom: 32px !important;
 }
 
+.whatsapp-manager .btn-primary {
+  background: var(--nm-bg) !important;
+  box-shadow: 8px 8px 16px var(--nm-shadow),
+              -8px -8px 16px var(--nm-light) !important;
+  color: var(--nm-accent) !important;
+  border-radius: 20px !important;
+  padding: 16px !important;
+}
+
+.whatsapp-manager .btn-danger {
+  background: var(--nm-bg) !important;
+  box-shadow: 8px 8px 16px var(--nm-shadow),
+              -8px -8px 16px var(--nm-light) !important;
+  color: #ef4444 !important;
+  border-radius: 20px !important;
+}
+
+.whatsapp-manager input, .whatsapp-manager textarea {
+  background: var(--nm-bg) !important;
+  box-shadow: inset 6px 6px 12px var(--nm-shadow),
+              inset -6px -6px 12px var(--nm-light) !important;
+  border: none !important;
+  border-radius: 15px !important;
+  color: var(--nm-text) !important;
+}
+
+@media (max-width: 1024px) {
+  .settings-split-container {
+    grid-template-columns: 1fr;
+  }
+}
 @media (max-width: 768px) {
   .settings-page {
     padding: 24px;
   }
-  .settings-header {
-    gap: 16px;
-    margin-bottom: 40px;
-  }
-  .settings-header h1 {
-    font-size: 26px;
+  .whatsapp-manager .card-container {
+    grid-template-columns: 1fr !important;
   }
 }
