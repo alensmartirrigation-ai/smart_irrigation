@@ -243,6 +243,7 @@ const deleteFarm = async (farmId) => {
 };
 
 module.exports = {
+  seedFarm,
   getFarms,
   createFarm,
   updateFarmConnection,
