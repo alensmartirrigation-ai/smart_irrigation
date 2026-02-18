@@ -1,4 +1,4 @@
-const { ingestReadings } = require('../services/sensorService');
+const { ingestReadings, deleteReadingsByFarmId } = require('../services/sensorService');
 const { queryAllFieldsHistory, buildRange, toPositiveInt } = require('../services/farmService');
 const asyncHandler = require('../utils/asyncHandler');
 
@@ -18,4 +18,10 @@ exports.getByFarmId = asyncHandler(async (req, res) => {
     toPositiveInt(limit, 50, 1000)
   );
   res.json(history);
+});
+
+exports.deleteByFarmId = asyncHandler(async (req, res) => {
+  const { farmId } = req.params;
+  await deleteReadingsByFarmId(farmId);
+  res.status(200).json({ message: `All sensor data for farm ${farmId} deleted` });
 });

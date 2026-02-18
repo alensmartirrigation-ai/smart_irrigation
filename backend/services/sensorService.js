@@ -1,7 +1,27 @@
 const { Point } = require('@influxdata/influxdb-client');
-const { influxWriteApi } = require('../config/influxClient');
+const { influxWriteApi, influxDeleteApi, influxBucket, influxOrg } = require('../config/influxClient');
 const { evaluateThresholds, recordAlert } = require('./alertService');
 const logger = require('../utils/logger');
+
+const deleteReadingsByFarmId = async (farmId) => {
+  const start = new Date(0).toISOString();
+  const stop = new Date().toISOString();
+  
+  // Tag predicate syntax for InfluxDB Delete API
+  const predicate = `farm_id="${farmId}"`;
+
+  logger.info(`Deleting sensor data for farm_id: ${farmId}`, { start, stop, predicate });
+
+  await influxDeleteApi.postDelete({
+    orgID: influxOrg, 
+    bucket: influxBucket,
+    body: {
+      start,
+      stop,
+      predicate,
+    },
+  });
+};
 
 const ingestReadings = async (readings) => {
   if (!Array.isArray(readings) || readings.length === 0) {
@@ -39,4 +59,5 @@ const ingestReadings = async (readings) => {
 
 module.exports = {
   ingestReadings,
+  deleteReadingsByFarmId,
 };

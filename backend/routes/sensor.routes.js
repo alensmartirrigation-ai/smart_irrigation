@@ -1,5 +1,5 @@
 const express = require('express');
-const { ingest, getByFarmId } = require('../controllers/sensor.controller');
+const { ingest, getByFarmId, deleteByFarmId } = require('../controllers/sensor.controller');
 const validationMiddleware = require('../middleware/validationMiddleware');
 const { sensorPayloadSchema } = require('../validators/sensorSchema');
 
@@ -12,5 +12,6 @@ router.post(
 );
 
 router.get('/sensor/farm/:farmId', getByFarmId);
+router.delete('/sensor/farm/:farmId', deleteByFarmId);
 
 module.exports = router;
