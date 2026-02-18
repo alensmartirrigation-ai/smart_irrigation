@@ -38,7 +38,7 @@ services:
       - evolution_net
 
   evolution_api:
-    image: atendai/evolution-api:v2.1.1
+    image: atendai/evolution-api:latest
     container_name: evolution_api
     restart: always
     ports:
@@ -47,6 +47,7 @@ services:
       - SERVER_URL=http://20.197.17.201:${API_PORT}
       - AUTHENTICATION_TYPE=apikey
       - AUTHENTICATION_API_KEY=${API_KEY}
+      - CONFIG_SESSION_PHONE_VERSION=2.3000.1015901307
       - DATABASE_ENABLED=true
       - DATABASE_PROVIDER=postgresql
       - DATABASE_CONNECTION_URI=postgresql://evolution:${DB_PASS}@evolution_db:5432/evolution?schema=public
