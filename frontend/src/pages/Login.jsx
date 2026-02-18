@@ -96,7 +96,6 @@ const Login = () => {
           No account? Contact Administrator
         </div>
       </div>
-    </>
   );
 };
 
