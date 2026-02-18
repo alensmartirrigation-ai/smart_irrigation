@@ -57,7 +57,7 @@ services:
       - "${API_PORT}:8080"
     environment:
       - SERVER_URL=http://20.197.17.201:${API_PORT}
-      - AUTHENTICATION_TYPE=none
+      - AUTHENTICATION_TYPE=apikey
       - AUTHENTICATION_API_KEY=${API_KEY}
       - NODE_OPTIONS=--max-old-space-size=4096
       - DATABASE_ENABLED=true
@@ -66,7 +66,10 @@ services:
       - DATABASE_CONNECTION_URI=postgresql://evolution:${DB_PASS}@evolution_db:5432/evolution?schema=public
       - DATABASE_CONNECTION_CLIENT_NAME=evolution_api
       - CLEAN_PRISMA_CACHE_ON_START=true
-      - CACHE_REDIS_ENABLED=false
+      - CACHE_REDIS_ENABLED=true
+      - CACHE_REDIS_URI=redis://evolution_redis:6379
+      - CACHE_REDIS_PREFIX=EVO
+      - TZ=Etc/UTC
       - TZ=Etc/UTC
       - CONFIG_SESSION_PHONE_VERSION=2.3000.1015901307
       - CACHE_REDIS_URI=redis://evolution_redis:6379
