@@ -48,7 +48,7 @@ services:
       - evolution_net
 
   evolution_api:
-    image: atendai/evolution-api:v2.1.1
+    image: atendai/evolution-api:v2.2.3
     container_name: evolution_api
     restart: always
     shm_size: '2gb'
@@ -62,6 +62,7 @@ services:
       - DATABASE_PROVIDER=postgresql
       - DATABASE_CONNECTION_URI=postgresql://evolution:${DB_PASS}@evolution_db:5432/evolution?schema=public
       - DATABASE_CONNECTION_CLIENT_NAME=evolution_api
+      - CLEAN_PRISMA_CACHE_ON_START=true
       - CACHE_REDIS_ENABLED=false
       - TZ=Etc/UTC
       - CONFIG_SESSION_PHONE_VERSION=2.3000.1015901307
