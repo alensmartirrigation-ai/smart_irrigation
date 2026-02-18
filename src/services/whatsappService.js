@@ -1,34 +1,44 @@
-const twilio = require('twilio');
+const axios = require('axios');
 const logger = require('../utils/logger');
 
 const sendWhatsAppMessage = async (phone, messageText) => {
+  const apiUrl = process.env.EVOLUTION_API_URL;
+  const apiKey = process.env.EVOLUTION_API_KEY;
+  const instanceName = process.env.EVOLUTION_INSTANCE_NAME;
 
-  const accountSid = process.env.TWILIO_ACCOUNT_SID;
-  const authToken = process.env.TWILIO_AUTH_TOKEN;
-  const fromNumber = process.env.TWILIO_WHATSAPP_NUMBER || process.env.TWILIO_PHONE_NUMBER;
-
-  if (!accountSid || !authToken || !fromNumber) {
-    throw new Error('Twilio credentials missing: set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_WHATSAPP_NUMBER (or TWILIO_PHONE_NUMBER)');
+  if (!apiUrl || !apiKey || !instanceName) {
+    throw new Error('Evolution API credentials missing: set EVOLUTION_API_URL, EVOLUTION_API_KEY, and EVOLUTION_INSTANCE_NAME');
   }
 
-  // Normalize: strip whatsapp: prefix if present, extract digits, rebuild proper format
-  const normalizeWhatsApp = (num) => {
-    const digits = num.replace(/^whatsapp:/i, '').replace(/\D/g, '');
-    return `whatsapp:+${digits}`;
-  };
-  const from = normalizeWhatsApp(fromNumber);
-  const to = normalizeWhatsApp(phone);
+  // Normalize phone number for Evolution API (remove any non-digits)
+  const digits = phone.replace(/^whatsapp:/i, '').replace(/\D/g, '');
+  
+  try {
+    const response = await axios.post(
+      `${apiUrl}/message/sendText/${instanceName}`,
+      {
+        number: digits,
+        text: messageText,
+        linkPreview: false,
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': apiKey,
+        },
+      }
+    );
 
-  const client = twilio(accountSid, authToken);
+    const data = response.data;
+    const messageId = data.key?.id || data.messageId;
 
-  const message = await client.messages.create({
-    from,
-    to,
-    body: messageText,
-  });
-
-  logger.info('WhatsApp message sent via Twilio', { phone, sid: message.sid });
-  return { sid: message.sid };
+    logger.info('WhatsApp message sent via Evolution API', { phone: digits, sid: messageId });
+    return { sid: messageId };
+  } catch (error) {
+    const errorMsg = error.response?.data?.message || error.message;
+    logger.error('Failed to send WhatsApp message via Evolution API', { error: errorMsg });
+    throw new Error(`Evolution API error: ${errorMsg}`);
+  }
 };
 
 module.exports = {

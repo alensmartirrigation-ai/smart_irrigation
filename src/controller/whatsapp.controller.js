@@ -27,22 +27,33 @@ exports.sendMessage = asyncHandler(async (req, res) => {
   });
 });
 
-exports.verifyWebhook = (req, res) => {
-  // Extend this if using Meta verification challenge
-  return res.sendStatus(200);
-};
-
 exports.handleWebhook = asyncHandler(async (req, res) => {
-  const { From, To, Body, MessageSid } = req.body;
+  const payload = req.body;
+  
+  // Evolution API sends notifications for various events. We care about MESSAGES_UPSERT.
+  if (payload.event !== 'messages.upsert') {
+    return res.status(200).send('Event ignored');
+  }
+
+  const data = payload.data;
+  const message = data.message;
+  const key = data.key;
+
+  // Ignore messages sent by the bot itself
+  if (key.fromMe) {
+    return res.status(200).send('Self message ignored');
+  }
+
+  const From = key.remoteJid.split('@')[0]; // Extract number from JID
+  const Body = message.conversation || message.extendedTextMessage?.text || '';
+
+  if (!Body) {
+    return res.status(200).send('Empty message ignored');
+  }
 
   logger.info(`WhatsApp Webhook Received: ${From}: "${Body}"`);
 
-  if (!Body || !From) {
-    return res.status(200).send('<Response></Response>');
-  }
-
   let reply;
-
   try {
     reply = await runAgent(Body.trim());
   } catch (error) {
@@ -54,5 +65,5 @@ exports.handleWebhook = asyncHandler(async (req, res) => {
 
   await sendWhatsAppMessage(From, reply);
 
-  return res.status(200).send('<Response></Response>');
+  return res.status(200).send('OK');
 });
