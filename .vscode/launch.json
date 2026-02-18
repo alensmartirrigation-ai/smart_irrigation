@@ -6,7 +6,8 @@
       "request": "launch",
       "name": "Launch Server (Development)",
       "skipFiles": ["<node_internals>/**"],
-      "program": "${workspaceFolder}/server.js",
+      "program": "${workspaceFolder}/backend/index.js",
+      "cwd": "${workspaceFolder}/backend",
       "env": {
         "NODE_ENV": "development"
       },
@@ -17,7 +18,8 @@
       "request": "launch",
       "name": "Nodemon Debug",
       "runtimeExecutable": "nodemon",
-      "program": "${workspaceFolder}/server.js",
+      "program": "${workspaceFolder}/backend/index.js",
+      "cwd": "${workspaceFolder}/backend",
       "restart": true,
       "env": {
         "NODE_ENV": "development"
