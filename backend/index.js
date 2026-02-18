@@ -23,14 +23,12 @@ const server = app.listen(env.PORT, async () => {
 
   whatsappService.setIO(io);
   farmService.setIO(io);
-  await whatsappService.init();
+  await whatsappService.initAll();
 
   io.on('connection', (socket) => {
     logger.debug('New client connected');
-    socket.emit('whatsapp_status', whatsappService.getStatus().status);
-    if (whatsappService.getStatus().qr) {
-      socket.emit('whatsapp_qr', whatsappService.getStatus().qr);
-    }
+    // We can't really emit status here without knowing which farm the client cares about.
+    // Frontend will fetch status via API or socket specific listeners.
   });
 });
 

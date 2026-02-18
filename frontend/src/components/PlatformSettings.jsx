@@ -10,66 +10,63 @@ const PlatformSettings = ({ selectedFarm }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Socket connection and global status fetch - runs once
-    const socket = io(); 
+    if (!selectedFarm) return;
+
+    const socket = io();
     
-    // Initial fetch
+    // Initial fetch for the specific farm
     const fetchStatus = async () => {
+      setLoading(true);
       try {
-        const response = await axios.get('/api/whatsapp/status');
-        // Only set initial global status if no farm is selected yet
-        // If a farm IS selected, the other useEffect will handle overwriting this shortly, 
-        // but to avoid flicker we can check here too, or just let it update global state
-        if (!selectedFarm) {
-             setStatus(response.data.status);
-        }
+        const response = await axios.get(`/api/whatsapp/status?farmId=${selectedFarm.id}`);
+        setStatus(response.data.status);
         setQrCode(response.data.qr);
-        setLoading(false);
       } catch (err) {
         console.error('Failed to fetch WhatsApp status:', err);
+        setStatus('disconnected');
+      } finally {
         setLoading(false);
       }
     };
 
     fetchStatus();
 
-    socket.on('whatsapp_status', (newStatus) => {
-      // If we are viewing a specific farm, we generally want to trust the farm's status 
-      // BUT if the global system disconnects, the farm is effectively disconnected too.
-      // So updating status here is valid for 'disconnected' events.
-      // For 'connected' events, we might want to wait for the specific farm update event 
-      // (which comes via FarmSelector -> prop update), but seeing "Connected" globally is also good feedback.
-      if (!selectedFarm) {
-          setStatus(newStatus);
+    socket.on('whatsapp_status', (data) => {
+      // Check if the event is for the current farm
+      if (data.farmId === selectedFarm.id) {
+          setStatus(data.status);
+          if (data.status === 'connected') setQrCode(null);
       }
-      if (newStatus === 'connected') setQrCode(null);
     });
 
-    socket.on('whatsapp_qr', (qr) => {
-      setQrCode(qr);
-      setLoading(false);
+    socket.on('whatsapp_qr', (data) => {
+      if (data.farmId === selectedFarm.id) {
+          setQrCode(data.qr);
+          setLoading(false);
+      }
     });
 
     return () => {
       socket.disconnect();
     };
-  }, []); // Empty dependency array - runs once
+  }, [selectedFarm]); // Re-run when selectedFarm changes
 
-  useEffect(() => {
-    // React to selectedFarm changes
-    if (selectedFarm) {
-        setStatus(selectedFarm.connection_status || 'disconnected');
-    }
-  }, [selectedFarm]);
+  // We don't need a separate useEffect for selectedFarm.connection_status anymore
+  // because we fetch the source-of-truth status from the WhatsApp service directly 
+  // when the farm changes. However, initially displayed status from the prop 
+  // is faster, so we can initialize state with it if we want, but the fetch is safer.
 
   const handleLogout = async () => {
     if (!window.confirm('Are you sure you want to logout from WhatsApp?')) return;
+    if (!selectedFarm) return;
+    
     try {
-      await axios.post('/api/whatsapp/logout');
+      await axios.post('/api/whatsapp/logout', { farmId: selectedFarm.id });
       setStatus('disconnected');
       setQrCode(null);
     } catch (err) {
       alert('Failed to logout');
+      console.error(err);
     }
   };
 
@@ -79,6 +76,18 @@ const PlatformSettings = ({ selectedFarm }) => {
       case 'scanning': return 'QR Ready';
       case 'disconnected': return 'Disconnected';
       default: return 'Initializing...';
+    }
+  };
+
+  const handleReconnect = async () => {
+    setLoading(true);
+    try {
+      await axios.post('/api/whatsapp/reconnect', { farmId: selectedFarm.id });
+      // The socket event should update status to 'initializing'/'connecting' shortly
+    } catch (err) {
+      console.error('Failed to reconnect:', err);
+      // Fallback reload if API fails? Or just show error?
+      // window.location.reload(); 
     }
   };
 
@@ -135,7 +144,7 @@ const PlatformSettings = ({ selectedFarm }) => {
               <span>Disconnect WhatsApp</span>
             </button>
           ) : (
-            <button className="action-btn-nm" onClick={() => window.location.reload()} disabled={loading}>
+            <button className="action-btn-nm" onClick={handleReconnect} disabled={loading}>
               <RefreshCw size={18} className={loading ? 'spinning' : ''} />
               <span>Retry Connection</span>
             </button>

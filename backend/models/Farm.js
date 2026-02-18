@@ -11,13 +11,29 @@ const Farm = sequelize.define('Farm', {
     type: DataTypes.STRING,
     allowNull: false
   },
+  session_id: {
+    type: DataTypes.STRING, // UUID
+    allowNull: true
+  },
+  auth_path: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
   message_platform: {
     type: DataTypes.STRING,
     defaultValue: 'whatsapp'
   },
   connection_status: {
-    type: DataTypes.ENUM('connected', 'disconnected', 'pending'),
+    type: DataTypes.ENUM('disconnected', 'connecting', 'qr_pending', 'connected'),
     defaultValue: 'disconnected'
+  },
+  last_connected_at: {
+    type: DataTypes.DATE,
+    allowNull: true
+  },
+  last_disconnect_reason: {
+    type: DataTypes.STRING,
+    allowNull: true
   },
   credentials: {
     type: DataTypes.JSONB,
