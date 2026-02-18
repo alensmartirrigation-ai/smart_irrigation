@@ -63,7 +63,7 @@ const Home = () => {
       <main className="main-content">
         {/* Header */}
         <header className="dashboard-header">
-          <button className="header-action-btn">
+          <button className="header-action-btn" onClick={() => navigate('/settings')}>
             <Settings size={22} />
           </button>
           <div className="profile-img-placeholder">

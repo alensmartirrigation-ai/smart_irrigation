@@ -1,0 +1,171 @@
+:root {
+  --nm-bg: #e0e5ec;
+  --nm-light: #ffffff;
+  --nm-shadow: #a3b1c6;
+  --nm-accent: #6C63FF;
+  --nm-text: #4a4a4a;
+  --nm-text-light: #7a7a7a;
+}
+
+.settings-page {
+  min-height: 100vh;
+  background-color: var(--nm-bg);
+  color: var(--nm-text);
+  padding: 40px;
+  font-family: 'Inter', sans-serif;
+}
+
+.settings-header {
+  max-width: 1000px;
+  margin: 0 auto 60px;
+  display: flex;
+  align-items: center;
+  gap: 32px;
+}
+
+.settings-header h1 {
+  font-size: 34px;
+  font-weight: 700;
+}
+
+.back-btn {
+  width: 56px;
+  height: 56px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--nm-bg);
+  box-shadow: 8px 8px 16px var(--nm-shadow),
+              -8px -8px 16px var(--nm-light);
+  cursor: pointer;
+  border: none;
+  color: var(--nm-text);
+  transition: all 0.2s ease;
+}
+
+.back-btn:hover {
+  box-shadow: 4px 4px 8px var(--nm-shadow),
+              -4px -4px 8px var(--nm-light);
+  transform: translateY(1px);
+}
+
+.settings-container {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.settings-section {
+  margin-bottom: 64px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.section-icon {
+  color: var(--nm-accent);
+}
+
+.section-header h2 {
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.section-description {
+  font-size: 16px;
+  color: var(--nm-text-light);
+  margin-bottom: 32px;
+}
+
+.neumorphic-card {
+  padding: 40px;
+  border-radius: 40px;
+  background: var(--nm-bg);
+  box-shadow: 20px 20px 60px var(--nm-shadow),
+              -20px -20px 60px var(--nm-light);
+}
+
+.integration-card {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.integration-info h3 {
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.integration-info p {
+  font-size: 15px;
+  color: var(--nm-text-light);
+}
+
+/* Override WhatsAppManager styles for Neumorphism compatibility */
+.whatsapp-manager .card {
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+  padding: 0 !important;
+}
+
+.whatsapp-manager .qr-wrapper {
+  background: var(--nm-bg) !important;
+  box-shadow: inset 6px 6px 12px var(--nm-shadow),
+              inset -6px -6px 12px var(--nm-light) !important;
+  border-radius: 24px !important;
+  padding: 24px !important;
+}
+
+.whatsapp-manager .btn-primary {
+  background: var(--nm-bg) !important;
+  box-shadow: 8px 8px 16px var(--nm-shadow),
+              -8px -8px 16px var(--nm-light) !important;
+  color: var(--nm-accent) !important;
+  border-radius: 16px !important;
+  font-weight: 700 !important;
+}
+
+.whatsapp-manager .btn-danger {
+  background: var(--nm-bg) !important;
+  box-shadow: 8px 8px 16px var(--nm-shadow),
+              -8px -8px 16px var(--nm-light) !important;
+  color: #ef4444 !important;
+  border-radius: 16px !important;
+  font-weight: 700 !important;
+}
+
+.whatsapp-manager input, .whatsapp-manager textarea {
+  background: var(--nm-bg) !important;
+  box-shadow: inset 4px 4px 8px var(--nm-shadow),
+              inset -4px -4px 8px var(--nm-light) !important;
+  border: none !important;
+  border-radius: 12px !important;
+  color: var(--nm-text) !important;
+}
+
+.whatsapp-manager .status-badge {
+  background: var(--nm-bg) !important;
+  box-shadow: 4px 4px 8px var(--nm-shadow),
+              -4px -4px 8px var(--nm-light) !important;
+  color: var(--nm-text) !important;
+  border: none !important;
+}
+
+@media (max-width: 768px) {
+  .settings-page {
+    padding: 24px;
+  }
+  .settings-header {
+    gap: 16px;
+    margin-bottom: 40px;
+  }
+  .settings-header h1 {
+    font-size: 26px;
+  }
+}
