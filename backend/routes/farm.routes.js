@@ -30,6 +30,21 @@ router.post('/farms', async (req, res) => {
     }
 });
 
+router.put('/farms/:id', async (req, res) => {
+    try {
+        const { message_platform, connection_status, credentials } = req.body;
+        const farm = await farmService.updateFarmConnection(
+            req.params.id, 
+            message_platform, 
+            connection_status, 
+            credentials
+        );
+        res.json(farm);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
 router.delete('/farms/:id', async (req, res) => {
     try {
         await farmService.deleteFarm(req.params.id);

@@ -1,0 +1,287 @@
+.user-list-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  padding: 10px;
+}
+
+.user-list-controls {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto 10px auto;
+}
+
+.search-bar {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+  background: var(--nm-bg);
+  box-shadow: inset 4px 4px 8px var(--nm-shadow), inset -4px -4px 8px var(--nm-light);
+  border-radius: 12px;
+  color: var(--nm-text-light);
+}
+
+.search-bar input {
+  background: transparent;
+  border: none;
+  outline: none;
+  width: 100%;
+  color: var(--nm-text);
+  font-family: inherit;
+}
+
+.refresh-btn {
+  padding: 12px;
+  background: var(--nm-bg);
+  box-shadow: 4px 4px 8px var(--nm-shadow), -4px -4px 8px var(--nm-light);
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  color: var(--nm-accent);
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.refresh-btn:active {
+  box-shadow: inset 4px 4px 8px var(--nm-shadow), inset -4px -4px 8px var(--nm-light);
+  transform: scale(0.95);
+}
+
+.refresh-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.user-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 25px;
+  width: 100%;
+  justify-content: center; /* Center grid items */
+}
+
+.user-card {
+  background: var(--nm-bg);
+  box-shadow: 6px 6px 12px var(--nm-shadow), -6px -6px 12px var(--nm-light);
+  border-radius: 20px;
+  padding: 20px;
+  transition: transform 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.user-card:hover {
+  transform: translateY(-5px);
+}
+
+.user-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 15px;
+}
+
+.user-avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 15px;
+  background: var(--nm-bg);
+  box-shadow: 3px 3px 6px var(--nm-shadow), -3px -3px 6px var(--nm-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--nm-accent);
+}
+
+.user-role-badge {
+  padding: 4px 10px;
+  background: var(--nm-bg);
+  box-shadow: inset 2px 2px 4px var(--nm-shadow), inset -2px -2px 4px var(--nm-light);
+  border-radius: 20px;
+  font-size: 11px;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--nm-accent);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.user-card-body h3 {
+  margin: 0 0 5px 0;
+  font-size: 18px;
+  color: var(--nm-text);
+}
+
+.username {
+  font-size: 14px;
+  color: var(--nm-accent);
+  margin-bottom: 15px;
+}
+
+.user-info-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--nm-text-light);
+}
+
+.user-list-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 50px;
+  color: var(--nm-text-light);
+  gap: 15px;
+}
+
+.user-list-state.error {
+  color: #ff4d4d;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid var(--nm-bg);
+  border-top: 4px solid var(--nm-accent);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  box-shadow: 4px 4px 8px var(--nm-shadow), -4px -4px 8px var(--nm-light);
+}
+
+.user-card:hover .delete-btn-nm {
+  opacity: 1;
+  bottom: 15px;
+  left: 15px;
+}
+
+.delete-btn-nm {
+  position: absolute;
+  bottom: -10px;
+  left: 15px;
+  width: 32px;
+  height: 32px;
+  background: var(--nm-bg);
+  box-shadow: 2px 2px 4px var(--nm-shadow), -2px -2px 4px var(--nm-light);
+  border-radius: 10px;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ff4d4d;
+  cursor: pointer;
+  opacity: 0;
+  transition: all 0.2s ease;
+  z-index: 5;
+}
+
+.delete-btn-nm:hover {
+  transform: scale(1.1);
+}
+
+.delete-btn-nm:active {
+  box-shadow: inset 2px 2px 4px var(--nm-shadow), inset -2px -2px 4px var(--nm-light);
+  transform: scale(0.95);
+}
+
+/* User Farms Section */
+.user-farms-section {
+  margin-top: 20px;
+  padding-top: 15px;
+  border-top: 1px solid rgba(0,0,0,0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--nm-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.farm-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-height: 24px;
+}
+
+.farm-tag {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  background: var(--nm-bg);
+  box-shadow: 2px 2px 4px var(--nm-shadow), -2px -2px 4px var(--nm-light);
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--nm-text);
+}
+
+.unlink-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #ff4d4d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.unlink-btn:hover {
+  background: rgba(255, 77, 77, 0.1);
+}
+
+.no-farms {
+  font-size: 12px;
+  color: var(--nm-text-light);
+  font-style: italic;
+  margin: 0;
+}
+
+.attach-farm-control select {
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--nm-bg);
+  box-shadow: inset 2px 2px 4px var(--nm-shadow), inset -2px -2px 4px var(--nm-light);
+  border-radius: 10px;
+  border: none;
+  font-size: 12px;
+  color: var(--nm-text);
+  outline: none;
+  cursor: pointer;
+}
+
+/* Ensure card has enough bottom padding for the delete button if needed, 
+   but since it's absolute and card has padding 20px, it should be fine. */
+.user-card {
+  padding-bottom: 50px; /* Extra space for the delete button */
+}

@@ -13,20 +13,7 @@ const sanitizeId = (value) => {
   return value;
 };
 
-const seedFarm = async () => {
-    try {
-        if (await Farm.count() === 0) {
-            await Farm.create({
-                name: 'Main Farm',
-                message_platform: 'whatsapp',
-                connection_status: 'disconnected'
-            });
-            logger.info('Default farm seeded in PostgreSQL');
-        }
-    } catch (error) {
-        logger.error('Failed to seed farm', { error: error.message });
-    }
-};
+
 
 const toPositiveInt = (value, fallback, max = 500) => {
   const parsed = Number.parseInt(value, 10);
@@ -211,17 +198,17 @@ const createFarm = async (name) => {
     }
 };
 
-const updateFarmConnection = async (farmId, platform, status, credentials = {}) => {
+const updateFarmConnection = async (farmId, platform, status, credentials) => {
     try {
         const farm = await Farm.findByPk(farmId);
         if (!farm) throw new Error('Farm not found');
         
-        farm.message_platform = platform;
-        farm.connection_status = status;
-        farm.credentials = credentials;
+        if (platform !== undefined) farm.message_platform = platform;
+        if (status !== undefined) farm.connection_status = status;
+        if (credentials !== undefined) farm.credentials = credentials;
         
         await farm.save();
-        logger.info('Farm connection updated', { farmId, status });
+        logger.info('Farm connection updated', { farmId, status: farm.connection_status });
         return farm;
     } catch (error) {
         logger.error('Failed to update farm connection', { farmId, error: error.message });
@@ -243,7 +230,6 @@ const deleteFarm = async (farmId) => {
 };
 
 module.exports = {
-  seedFarm,
   getFarms,
   createFarm,
   updateFarmConnection,

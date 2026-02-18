@@ -86,17 +86,6 @@
   min-height: 100vh;
 }
 
-/* Header Styling */
-.dashboard-header {
-  height: 80px;
-  padding: 0 40px;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 24px;
-  background: var(--nm-bg);
-}
-
 .header-action-btn {
   width: 50px;
   height: 50px;
@@ -138,29 +127,52 @@
 
 /* Dashboard Content */
 .content-body {
-  padding: 40px;
+  padding: 20px 40px 40px 40px;
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Center children horizontally */
+}
+
+.dashboard-main-area {
+  width: 100%;
+  max-width: 1200px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.active-tab-title {
+  font-size: 24px;
+  margin-bottom: 24px;
+  color: var(--nm-accent);
+  text-align: center;
+}
+
+.tab-content-container {
+  width: 100%;
+  min-height: 400px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.tab-placeholder {
+  width: 100%;
+  max-width: 800px;
+  height: 200px;
+  background: var(--nm-bg);
+  box-shadow: inset 6px 6px 12px var(--nm-shadow), 
+              inset -6px -6px 12px var(--nm-light);
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--nm-text-light);
 }
 
 .welcome-card {
-  padding: 48px;
-  border-radius: 40px;
-  background: var(--nm-bg);
-  box-shadow: 20px 20px 60px var(--nm-shadow),
-              -20px -20px 60px var(--nm-light);
-  max-width: 800px;
-}
-
-.welcome-card h1 {
-  font-size: 34px;
-  font-weight: 700;
-  margin-bottom: 16px;
-}
-
-.welcome-card p {
-  font-size: 18px;
-  color: var(--nm-text-light);
-  margin-bottom: 32px;
+  display: none; /* Hide old welcome card */
 }
 
 @media (max-width: 768px) {

@@ -7,9 +7,15 @@ import {
   Settings, 
   LogOut, 
   User,
-  Sprout
+  Sprout,
+  Smartphone
 } from 'lucide-react';
 import { logout } from '../utils/auth';
+import UserList from '../components/UserList';
+import FarmList from '../components/FarmList';
+import DashboardHeader from '../components/DashboardHeader';
+import FarmSelector from '../components/FarmSelector';
+import PlatformSettings from '../components/PlatformSettings';
 import './Home.css';
 
 const Home = () => {
@@ -23,8 +29,8 @@ const Home = () => {
 
   const navItems = [
     { id: 'users', label: 'Users', icon: <Users size={20} /> },
-    { id: 'farms', label: 'Farms Attached', icon: <Farm size={20} /> },
     { id: 'devices', label: 'Devices', icon: <Cpu size={20} /> },
+    { id: 'platform-settings', label: 'Platform Settings', icon: <Smartphone size={20} /> },
   ];
 
   return (
@@ -61,41 +67,30 @@ const Home = () => {
 
       {/* Main Content */}
       <main className="main-content">
-        {/* Header */}
-        <header className="dashboard-header">
-          <button className="header-action-btn" onClick={() => navigate('/settings')}>
-            <Settings size={22} />
-          </button>
+        <DashboardHeader 
+          title="Dashboard" 
+          subtitle="Welcome to the Smart Irrigation control center. Manage users, track farms, and monitor connected devices from this centralized hub."
+        >
+          <FarmSelector />
           <div className="profile-img-placeholder">
             <User size={28} />
           </div>
-        </header>
+        </DashboardHeader>
 
         {/* Content Body */}
         <div className="content-body">
-          <div className="welcome-card">
-            <h1>Admin Dashboard</h1>
-            <p>
-              Welcome to the Smart Irrigation control center. 
-              Manage users, track farms, and monitor connected devices from this centralized hub.
-            </p>
+          <div className="dashboard-main-area">
+            <h2 className="active-tab-title">
+              {navItems.find(t => t.id === activeTab)?.label}
+            </h2>
             
-            <div style={{ marginTop: '20px' }}>
-              <h2 style={{ fontSize: '24px', marginBottom: '16px', color: 'var(--nm-accent)' }}>
-                {navItems.find(t => t.id === activeTab)?.label}
-              </h2>
-              <div style={{ 
-                height: '200px', 
-                background: 'var(--nm-bg)', 
-                boxShadow: 'inset 6px 6px 12px var(--nm-shadow), inset -6px -6px 12px var(--nm-light)',
-                borderRadius: '20px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'var(--nm-text-light)'
-              }}>
-                Displaying management interface for {activeTab}...
-              </div>
+            <div className="tab-content-container">
+              {activeTab === 'users' ? <UserList /> : 
+               activeTab === 'platform-settings' ? <PlatformSettings /> : (
+                <div className="tab-placeholder">
+                  Displaying management interface for {activeTab}...
+                </div>
+              )}
             </div>
           </div>
         </div>

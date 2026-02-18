@@ -52,10 +52,97 @@
   --shadow-card: 0px 6px 20px rgba(0,0,0,0.06);
   --shadow-soft: 0px 8px 24px rgba(108,99,255,0.15);
 
+  /* Neumorphic Design Tokens */
+  --nm-bg: #e0e5ec;
+  --nm-light: #ffffff;
+  --nm-shadow: #a3b1c6;
+  --nm-accent: #6C63FF;
+  --nm-text: #4a4a4a;
+  --nm-text-light: #7a7a7a;
+
   /* Animation */
   --transition-fast: 150ms ease-in-out;
   --transition-normal: 250ms ease-in-out;
   --transition-slow: 400ms ease-in-out;
+}
+
+/* Global Form Utilities (Neumorphic) */
+.admin-form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px; /* More breathing room */
+}
+
+.input-field-nm {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 16px 20px; /* Better padding */
+  background: var(--nm-bg);
+  box-shadow: inset 6px 6px 12px var(--nm-shadow), 
+              inset -6px -6px 12px var(--nm-light);
+  border-radius: 20px;
+  color: var(--nm-text-light);
+  transition: all 0.3s ease;
+}
+
+.input-field-nm:focus-within {
+  box-shadow: inset 4px 4px 8px var(--nm-shadow), 
+              inset -4px -4px 8px var(--nm-light);
+}
+
+.input-field-nm input, 
+.input-field-nm select {
+  background: transparent;
+  border: none;
+  outline: none;
+  width: 100%;
+  color: var(--nm-text);
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.submit-btn-nm {
+  padding: 18px;
+  background: var(--nm-bg);
+  box-shadow: 8px 8px 16px var(--nm-shadow), 
+              -8px -8px 16px var(--nm-light);
+  border-radius: 20px;
+  border: none;
+  cursor: pointer;
+  color: var(--nm-accent);
+  font-weight: 700;
+  font-size: 18px;
+  transition: all 0.2s ease;
+  margin-top: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.submit-btn-nm:hover {
+  box-shadow: 4px 4px 8px var(--nm-shadow), 
+              -4px -4px 8px var(--nm-light);
+  transform: translateY(1px);
+}
+
+.submit-btn-nm:active {
+  box-shadow: inset 4px 4px 8px var(--nm-shadow), 
+              inset -4px -4px 8px var(--nm-light);
+  transform: translateY(2px);
+}
+
+.form-error {
+  color: #ff4d4d;
+  font-size: 14px;
+  text-align: center;
+  margin: 0;
+  padding: 12px;
+  background: var(--nm-bg);
+  box-shadow: inset 4px 4px 8px #f8d7da,
+              inset -4px -4px 8px #ffffff;
+  border-radius: 15px;
 }
 
 body {

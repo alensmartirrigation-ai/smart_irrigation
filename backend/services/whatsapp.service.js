@@ -46,6 +46,25 @@ class WhatsAppService {
     this.io = io;
   }
 
+  async _updateFarmStatus(status, credentials = null) {
+    const farmService = require('./farmService');
+    try {
+      const farms = await farmService.getFarms();
+      if (farms.length > 0) {
+        const primaryFarm = farms[0];
+        await farmService.updateFarmConnection(
+          primaryFarm.id,
+          'whatsapp',
+          status,
+          credentials || {}
+        );
+        logger.info(`Farm connection status updated to ${status}`, { farmId: primaryFarm.id });
+      }
+    } catch (err) {
+      logger.error('Failed to update farm connection status', { error: err.message, status });
+    }
+  }
+
   async init() {
     const { state, saveCreds } = await useMultiFileAuthState(this.authPath);
 
@@ -86,6 +105,9 @@ class WhatsAppService {
           this.io.emit('whatsapp_status', this.status);
         }
 
+        // Update database status
+        await this._updateFarmStatus('disconnected', null);
+
         if (shouldReconnect) {
           logger.info('WhatsApp connection closed. Reconnecting...');
           setTimeout(() => this.init(), 5000);
@@ -102,21 +124,7 @@ class WhatsAppService {
         logger.info('WhatsApp connection opened');
         
         // Update Farm WhatsApp Connection Details
-        const farmService = require('./farmService'); // Lazy require to avoid circular dep if any
-        try {
-            const farms = await farmService.getFarms();
-            if (farms.length > 0) {
-                const primaryFarm = farms[0];
-                await farmService.updateFarmConnection(
-                    primaryFarm.id, 
-                    'whatsapp', 
-                    'connected', 
-                    this.sock?.user || {}
-                );
-            }
-        } catch (err) {
-            logger.error('Failed to update farm connection status', { error: err.message });
-        }
+        await this._updateFarmStatus('connected', this.sock?.user);
 
         if (this.io) {
           this.io.emit('whatsapp_status', this.status);
@@ -190,11 +198,19 @@ class WhatsAppService {
 
   async logout() {
     if (this.sock) {
-      await this.sock.logout();
+      try {
+        await this.sock.logout();
+      } catch (err) {
+        logger.warn('Error during socket logout', { error: err.message });
+      }
+      
       if (fs.existsSync(this.authPath)) {
         fs.rmSync(this.authPath, { recursive: true, force: true });
       }
+      
       this.status = 'disconnected';
+      await this._updateFarmStatus('disconnected', null);
+
       if (this.io) {
         this.io.emit('whatsapp_status', this.status);
       }
