@@ -81,4 +81,28 @@ router.delete('/users/:id', async (req, res) => {
   }
 });
 
+// Link Farm to User
+router.post('/users/:id/farms', async (req, res) => {
+  try {
+    const { farmId } = req.body;
+    if (!farmId) {
+      return res.status(400).json({ error: 'farmId is required' });
+    }
+    await userService.linkFarm(req.params.id, farmId);
+    res.json({ message: 'Farm linked to user successfully' });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Unlink Farm from User
+router.delete('/users/:id/farms/:farmId', async (req, res) => {
+  try {
+    await userService.unlinkFarm(req.params.id, req.params.farmId);
+    res.json({ message: 'Farm unlinked from user successfully' });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
 module.exports = router;

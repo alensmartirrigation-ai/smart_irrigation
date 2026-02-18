@@ -1,4 +1,4 @@
-const Farm = require('../models/Farm');
+const { Farm, User, UserFarm } = require('../models');
 const { influxQueryApi, influxBucket } = require('../config/influxClient');
 const logger = require('../utils/logger');
 const { getActiveAlerts } = require('./alertService');
@@ -190,7 +190,10 @@ from(bucket: "${influxBucket}")
 
 const getFarms = async () => {
     try {
-        return await Farm.findAll();
+        const farms = await Farm.findAll({
+            include: [{ model: User, attributes: { exclude: ['password'] }, through: { attributes: [] } }]
+        });
+        return farms.map(f => f.toJSON());
     } catch (error) {
         logger.error('Failed to get farms', { error: error.message });
         return [];

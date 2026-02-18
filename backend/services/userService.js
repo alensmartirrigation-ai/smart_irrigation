@@ -1,5 +1,4 @@
-const User = require('../models/User');
-const sequelize = require('../utils/database');
+const { User, Farm, UserFarm, sequelize } = require('../models');
 const logger = require('../utils/logger');
 const config = require('../config/default');
 
@@ -167,10 +166,43 @@ class UserService {
     }
   }
 
+  async linkFarm(userId, farmId) {
+    try {
+      const user = await User.findByPk(userId);
+      const farm = await Farm.findByPk(farmId);
+      if (!user || !farm) {
+        throw new Error('User or Farm not found');
+      }
+      await user.addFarm(farm);
+      logger.info('Linked user to farm', { userId, farmId });
+      return true;
+    } catch (error) {
+      logger.error('Failed to link user to farm', { error: error.message });
+      throw error;
+    }
+  }
+
+  async unlinkFarm(userId, farmId) {
+    try {
+      const user = await User.findByPk(userId);
+      const farm = await Farm.findByPk(farmId);
+      if (!user || !farm) {
+        throw new Error('User or Farm not found');
+      }
+      await user.removeFarm(farm);
+      logger.info('Unlinked user from farm', { userId, farmId });
+      return true;
+    } catch (error) {
+      logger.error('Failed to unlink user from farm', { error: error.message });
+      throw error;
+    }
+  }
+
   async getUsers() {
     try {
       const users = await User.findAll({
-        attributes: { exclude: ['password'] }
+        attributes: { exclude: ['password'] },
+        include: [{ model: Farm, through: { attributes: [] } }]
       });
       return users.map(u => u.toJSON());
     } catch (error) {

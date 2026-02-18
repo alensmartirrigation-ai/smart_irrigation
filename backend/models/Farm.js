@@ -28,4 +28,9 @@ const Farm = sequelize.define('Farm', {
   tableName: 'farms'
 });
 
+// Associations defined in index or initialization
+Farm.associate = (models) => {
+  Farm.belongsToMany(models.User, { through: models.UserFarm });
+};
+
 module.exports = Farm;
