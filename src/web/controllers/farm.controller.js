@@ -1,6 +1,6 @@
-const { getFarmContext, sanitizeId } = require('../services/farmService');
-const { getActiveAlerts } = require('../services/alertService');
-const asyncHandler = require('../utils/asyncHandler');
+const { getFarmContext, sanitizeId } = require('../../app/services/farmService');
+const { getActiveAlerts } = require('../../app/services/alertService');
+const asyncHandler = require('../../app/utils/asyncHandler');
 
 exports.getContext = asyncHandler(async (req, res) => {
   const data = await getFarmContext(req.params.farmId);

@@ -4,18 +4,18 @@ A production-oriented Express API for smart irrigation telemetry, farm context s
 
 ## What Changed
 - Removed outdated startup/deploy/process-manager scripts and stale config artifacts.
-- Added structured app bootstrap: `src/app.js` + `src/index.js`.
+- Added explicit layered structure with `app` and `web` modules.
 - Added strict environment validation on startup.
 - Added liveness/readiness endpoints and improved graceful shutdown.
 - Standardized Docker packaging and CI verification workflow.
 
 ## Architecture
-- `src/index.js`: process/bootstrap, env loading, shutdown handling.
-- `src/app.js`: HTTP app, middleware, routes, error handling.
-- `src/config/`: runtime config and Influx client.
-- `src/controller/`: transport-layer request/response handling.
-- `src/services/`: business logic and Influx queries/writes.
-- `src/validators/`: payload contracts (Zod).
+- `src/index.js`: root entrypoint.
+- `src/web/index.js`: web runtime bootstrap and shutdown handling.
+- `src/web/app.js`: Express app wiring.
+- `src/web/controllers|routes|middleware`: HTTP transport layer.
+- `src/app/services|validators|utils`: application layer (business logic + contracts).
+- `src/config/`: runtime config and infrastructure clients.
 
 ## API Endpoints
 - `GET /health/live`

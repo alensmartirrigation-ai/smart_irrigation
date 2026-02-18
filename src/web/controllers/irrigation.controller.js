@@ -1,6 +1,6 @@
-const { recordIrrigation, getIrrigationHistory } = require('../services/irrigationService');
-const { toPositiveInt } = require('../services/farmService');
-const asyncHandler = require('../utils/asyncHandler');
+const { recordIrrigation, getIrrigationHistory } = require('../../app/services/irrigationService');
+const { toPositiveInt } = require('../../app/services/farmService');
+const asyncHandler = require('../../app/utils/asyncHandler');
 
 exports.record = asyncHandler(async (req, res) => {
   const { farm_id, duration_minutes, timestamp } = req.validatedBody;

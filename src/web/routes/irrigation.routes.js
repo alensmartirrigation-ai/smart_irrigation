@@ -1,7 +1,7 @@
 const express = require('express');
-const { record, getHistory } = require('../controller/irrigation.controller');
+const { record, getHistory } = require('../controllers/irrigation.controller');
 const validationMiddleware = require('../middleware/validationMiddleware');
-const { irrigationPayloadSchema } = require('../validators/irrigationSchema');
+const { irrigationPayloadSchema } = require('../../app/validators/irrigationSchema');
 
 const router = express.Router();
 

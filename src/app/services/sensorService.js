@@ -1,5 +1,5 @@
 const { Point } = require('@influxdata/influxdb-client');
-const { influxWriteApi } = require('../config/influxClient');
+const { influxWriteApi } = require('../../config/influxClient');
 const { evaluateThresholds, recordAlert } = require('./alertService');
 const logger = require('../utils/logger');
 

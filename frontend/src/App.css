@@ -1,0 +1,243 @@
+.whatsapp-container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.main-header {
+  margin-bottom: 40px;
+}
+
+.main-header h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 10px;
+  background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.main-header p {
+  color: #94a3b8;
+  font-size: 1.1rem;
+}
+
+.card-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.glass-card {
+  background: rgba(30, 41, 59, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  padding: 40px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-bottom: 30px;
+}
+
+.status-badge .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #94a3b8;
+}
+
+.status-badge.scanning .dot { background: #f59e0b; box-shadow: 0 0 10px #f59e0b; }
+.status-badge.connected .dot { background: #25d366; box-shadow: 0 0 10px #25d366; }
+.status-badge.disconnected .dot { background: #ef4444; box-shadow: 0 0 10px #ef4444; }
+
+.qr-wrapper {
+  background: white;
+  padding: 16px;
+  border-radius: 16px;
+  display: inline-block;
+  margin-bottom: 20px;
+  min-width: 256px;
+  min-height: 256px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #1e293b;
+}
+
+.qr-code {
+  max-width: 100%;
+  display: block;
+}
+
+.qr-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.qr-hint {
+  color: #94a3b8;
+  font-size: 0.9rem;
+}
+
+.connected-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.success-icon-container {
+  width: 80px;
+  height: 80px;
+  background: rgba(37, 211, 102, 0.1);
+  color: #25d366;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.connected-info h3 {
+  font-size: 1.5rem;
+  margin-bottom: 8px;
+}
+
+.connected-info p {
+  color: #94a3b8;
+  margin-bottom: 30px;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.card-header h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.message-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
+}
+
+.form-group label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #94a3b8;
+}
+
+.form-group input, .form-group textarea {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 12px 16px;
+  color: white;
+  font-family: inherit;
+  font-size: 1rem;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.form-group input:focus, .form-group textarea:focus {
+  border-color: #25d366;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.form-group textarea {
+  height: 100px;
+  resize: none;
+}
+
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-primary {
+  background: #25d366;
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #128c7e;
+  transform: translateY(-1px);
+}
+
+.btn-danger {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.btn-danger:hover {
+  background: #ef4444;
+  color: white;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.message-status-box {
+  margin-top: 16px;
+  padding: 12px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.875rem;
+}
+
+.message-status-box.success {
+  background: rgba(37, 211, 102, 0.1);
+  color: #25d366;
+}
+
+.message-status-box.error {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}

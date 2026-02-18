@@ -1,7 +1,7 @@
 const express = require('express');
-const { ingest, getByFarmId } = require('../controller/sensor.controller');
+const { ingest, getByFarmId } = require('../controllers/sensor.controller');
 const validationMiddleware = require('../middleware/validationMiddleware');
-const { sensorPayloadSchema } = require('../validators/sensorSchema');
+const { sensorPayloadSchema } = require('../../app/validators/sensorSchema');
 
 const router = express.Router();
 

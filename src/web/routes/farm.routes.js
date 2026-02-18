@@ -1,5 +1,5 @@
 const express = require('express');
-const { getContext, getAlerts } = require('../controller/farm.controller');
+const { getContext, getAlerts } = require('../controllers/farm.controller');
 
 const router = express.Router();
 

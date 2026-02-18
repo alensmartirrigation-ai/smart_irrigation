@@ -1,6 +1,6 @@
-const { ingestReadings } = require('../services/sensorService');
-const { queryAllFieldsHistory, buildRange, toPositiveInt } = require('../services/farmService');
-const asyncHandler = require('../utils/asyncHandler');
+const { ingestReadings } = require('../../app/services/sensorService');
+const { queryAllFieldsHistory, buildRange, toPositiveInt } = require('../../app/services/farmService');
+const asyncHandler = require('../../app/utils/asyncHandler');
 
 exports.ingest = asyncHandler(async (req, res) => {
   const payload = req.validatedBody;

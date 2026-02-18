@@ -3,7 +3,7 @@ const {
   influxWriteApi,
   influxQueryApi,
   influxBucket,
-} = require('../config/influxClient');
+} = require('../../config/influxClient');
 const { sanitizeId } = require('./farmService');
 const logger = require('../utils/logger');
 

@@ -1,4 +1,4 @@
-const { influxQueryApi, influxBucket } = require('../config/influxClient');
+const { influxQueryApi, influxBucket } = require('../../config/influxClient');
 const logger = require('../utils/logger');
 const { getActiveAlerts } = require('./alertService');
 

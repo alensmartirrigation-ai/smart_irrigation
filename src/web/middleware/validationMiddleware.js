@@ -1,5 +1,5 @@
 const { ZodError } = require('zod');
-const logger = require('../utils/logger');
+const logger = require('../../app/utils/logger');
 
 module.exports = (schema) => (req, res, next) => {
   try {
