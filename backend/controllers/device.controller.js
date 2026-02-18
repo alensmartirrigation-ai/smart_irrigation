@@ -1,4 +1,5 @@
 const { Device, Farm, FarmDevice } = require('../models');
+const deviceService = require('../services/device.service');
 const logger = require('../utils/logger');
 
 const createDevice = async (req, res, next) => {
@@ -109,6 +110,19 @@ const updateDevice = async (req, res, next) => {
   }
 };
 
+const getDeviceReadings = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { duration } = req.query; // e.g. '1h', '24h'
+
+    const readings = await deviceService.getReadings(id, duration);
+    res.status(200).json({ status: 'success', data: readings });
+  } catch (error) {
+    logger.error(`Failed to get readings for device ${req.params.id}`, { error: error.message });
+    next(error);
+  }
+};
+
 const deleteDevice = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -131,5 +145,7 @@ module.exports = {
   getAllDevices,
   getDeviceById,
   updateDevice,
-  deleteDevice
+  updateDevice,
+  deleteDevice,
+  getDeviceReadings
 };

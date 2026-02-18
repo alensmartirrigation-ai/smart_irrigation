@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Cpu, MapPin, Search, RefreshCw, Plus, Trash2, Trees as Farm, Edit } from 'lucide-react';
 import AddDeviceModal from './AddDeviceModal';
+import DeviceGraphModal from './DeviceGraphModal';
 import './DeviceList.css';
 
 const DeviceList = ({ selectedFarm }) => {
@@ -11,6 +12,8 @@ const DeviceList = ({ selectedFarm }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingDevice, setEditingDevice] = useState(null);
+  const [selectedDeviceForGraph, setSelectedDeviceForGraph] = useState(null);
+  const [isGraphModalOpen, setIsGraphModalOpen] = useState(false);
 
   useEffect(() => {
     fetchDevices();
@@ -37,7 +40,13 @@ const DeviceList = ({ selectedFarm }) => {
     }
   };
 
-  const handleDelete = async (id) => {
+  const handleCardClick = (device) => {
+    setSelectedDeviceForGraph(device);
+    setIsGraphModalOpen(true);
+  };
+ 
+  const handleDelete = async (e, id) => {
+    e.stopPropagation();
     if (!window.confirm('Are you sure you want to delete this device?')) return;
     try {
       const token = localStorage.getItem('token');
@@ -50,7 +59,8 @@ const DeviceList = ({ selectedFarm }) => {
     }
   };
 
-  const handleEdit = (device) => {
+  const handleEdit = (e, device) => {
+    e.stopPropagation();
     setEditingDevice(device);
     setIsModalOpen(true);
   };
@@ -106,7 +116,7 @@ const DeviceList = ({ selectedFarm }) => {
       ) : (
         <div className="device-grid">
           {filteredDevices.map(device => (
-            <div key={device.id} className="device-card">
+            <div key={device.id} className="device-card" onClick={() => handleCardClick(device)} style={{ cursor: 'pointer' }}>
               <div className="device-card-header">
                 <div className="device-icon">
                   <Cpu size={24} />
@@ -132,10 +142,10 @@ const DeviceList = ({ selectedFarm }) => {
                    </div>
                 )}
               </div>
-              <button className="edit-btn-nm" onClick={() => handleEdit(device)}>
+              <button className="edit-btn-nm" onClick={(e) => handleEdit(e, device)}>
                 <Edit size={16} />
               </button>
-              <button className="delete-btn-nm" onClick={() => handleDelete(device.id)}>
+              <button className="delete-btn-nm" onClick={(e) => handleDelete(e, device.id)}>
                 <Trash2 size={16} />
               </button>
             </div>
@@ -148,6 +158,12 @@ const DeviceList = ({ selectedFarm }) => {
         onClose={handleModalClose} 
         onDeviceAdded={fetchDevices}
         deviceToEdit={editingDevice}
+      />
+
+      <DeviceGraphModal
+        isOpen={isGraphModalOpen}
+        onClose={() => setIsGraphModalOpen(false)}
+        device={selectedDeviceForGraph}
       />
     </div>
   );

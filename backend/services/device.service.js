@@ -1,5 +1,5 @@
 const { Point } = require('@influxdata/influxdb-client');
-const { influxWriteApi } = require('../config/influxClient');
+const { influxWriteApi, influxQueryApi, influxBucket } = require('../config/influxClient');
 const { DeviceReading, Device } = require('../models');
 const logger = require('../utils/logger');
 
@@ -45,6 +45,48 @@ const ingestReading = async (deviceId, readingData) => {
   return { status: 'success', deviceId, timestamp };
 };
 
+const getReadings = async (deviceId, duration = '24h') => {
+  try {
+    const fluxQuery = `
+      from(bucket: "${influxBucket}")
+        |> range(start: -${duration})
+        |> filter(fn: (r) => r["_measurement"] == "device_readings")
+        |> filter(fn: (r) => r["device_id"] == "${deviceId}")
+        |> filter(fn: (r) => r["_field"] == "temperature" or r["_field"] == "humidity" or r["_field"] == "moisture")
+        |> pivot(rowKey:["_time"], columnKey: ["_field"], valueColumn: "_value")
+        |> sort(columns: ["_time"])
+    `;
+
+    const result = [];
+    await new Promise((resolve, reject) => {
+      influxQueryApi.queryRows(fluxQuery, {
+        next(row, tableMeta) {
+          const o = tableMeta.toObject(row);
+          result.push({
+            time: o._time,
+            temperature: o.temperature,
+            humidity: o.humidity,
+            moisture: o.moisture
+          });
+        },
+        error(error) {
+          logger.error('InfluxDB Query Error', { error });
+          reject(error);
+        },
+        complete() {
+          resolve();
+        }
+      });
+    });
+
+    return result;
+  } catch (err) {
+    logger.error(`Failed to fetch readings for device ${deviceId}`, { error: err.message });
+    throw err;
+  }
+};
+
 module.exports = {
-  ingestReading
+  ingestReading,
+  getReadings
 };
