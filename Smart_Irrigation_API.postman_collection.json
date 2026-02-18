@@ -1,0 +1,268 @@
+{
+  "info": {
+    "name": "Smart Irrigation API",
+    "description": "API collection for the Smart Irrigation system - sensor ingestion, farm context, alerts, and WhatsApp webhooks.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:4000"
+    },
+    {
+      "key": "farmId",
+      "value": "farm-01"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/",
+              "host": ["{{baseUrl}}"],
+              "path": [""]
+            },
+            "description": "Check if the API server is running."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Sensors",
+      "item": [
+        {
+          "name": "Ingest Single Reading",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"farm_id\": \"farm-01\",\n  \"sensor_id\": \"sensor-1\",\n  \"temperature\": 25.5,\n  \"humidity\": 60.2,\n  \"soil_moisture\": 45.3,\n  \"timestamp\": \"2025-02-18T10:30:00Z\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/sensor/ingest",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sensor", "ingest"]
+            },
+            "description": "Ingest a single sensor reading. Timestamp is optional (defaults to now)."
+          }
+        },
+        {
+          "name": "Ingest Batch Readings",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"readings\": [\n    {\n      \"farm_id\": \"farm-01\",\n      \"sensor_id\": \"sensor-1\",\n      \"temperature\": 25.5,\n      \"humidity\": 60.2,\n      \"soil_moisture\": 45.3\n    },\n    {\n      \"farm_id\": \"farm-01\",\n      \"sensor_id\": \"sensor-2\",\n      \"temperature\": 24.1,\n      \"humidity\": 58.0,\n      \"soil_moisture\": 52.1\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/sensor/ingest",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sensor", "ingest"]
+            },
+            "description": "Ingest multiple sensor readings in a single request."
+          }
+        },
+        {
+          "name": "Get Sensor History (by farm)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/sensor/farm/{{farmId}}?limit=50&period=-24h",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sensor", "farm", "{{farmId}}"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50",
+                  "description": "Number of points to retrieve"
+                },
+                {
+                  "key": "period",
+                  "value": "-24h",
+                  "description": "Time range (e.g. -24h, -7d)"
+                }
+              ]
+            },
+            "description": "Get pivoted historical sensor data for a specific farm."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Farm",
+      "item": [
+        {
+          "name": "Get Farm Context",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/farm/{{farmId}}/context",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "farm", "{{farmId}}", "context"]
+            },
+            "description": "Get aggregated context for a farm (latest sensor readings, alerts, etc.)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Alerts",
+      "item": [
+        {
+          "name": "Get Active Alerts (all farms)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/alerts/active",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "alerts", "active"]
+            },
+            "description": "Get all active alerts across farms."
+          }
+        },
+        {
+          "name": "Get Active Alerts (by farm)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/alerts/active?farm_id={{farmId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "alerts", "active"],
+              "query": [
+                {
+                  "key": "farm_id",
+                  "value": "{{farmId}}",
+                  "description": "Filter alerts by farm ID"
+                }
+              ]
+            },
+            "description": "Get active alerts for a specific farm."
+          }
+        }
+      ]
+    },
+    {
+      "name": "WhatsApp",
+      "item": [
+        {
+          "name": "Webhook Verification (GET)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/whatsapp/webhook?hub.mode=subscribe&hub.challenge=test_challenge&hub.verify_token=your-webhook-verify-token",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "whatsapp", "webhook"],
+              "query": [
+                {
+                  "key": "hub.mode",
+                  "value": "subscribe"
+                },
+                {
+                  "key": "hub.challenge",
+                  "value": "test_challenge"
+                },
+                {
+                  "key": "hub.verify_token",
+                  "value": "your-webhook-verify-token",
+                  "description": "Must match WHATSAPP_VERIFY_TOKEN env"
+                }
+              ]
+            },
+            "description": "Meta verifies the webhook URL during setup. Returns hub.challenge on success."
+          }
+        },
+        {
+          "name": "Webhook (POST - incoming message)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"object\": \"whatsapp_business_account\",\n  \"entry\": [\n    {\n      \"id\": \"123456789\",\n      \"changes\": [\n        {\n          \"value\": {\n            \"messaging_product\": \"whatsapp\",\n            \"metadata\": {\n              \"display_phone_number\": \"15550000000\",\n              \"phone_number_id\": \"123456\"\n            },\n            \"messages\": [\n              {\n                \"from\": \"15551234567\",\n                \"id\": \"wamid.xxx\",\n                \"timestamp\": \"1708234567\",\n                \"text\": {\n                  \"body\": \"status farm-01\"\n                },\n                \"type\": \"text\"\n              }\n            ]\n          },\n          \"field\": \"messages\"\n        }\n      ]\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/whatsapp/webhook",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "whatsapp", "webhook"]
+            },
+            "description": "Meta sends incoming WhatsApp messages here. Replies only when text contains 'status' and optional farm ID (e.g. 'status farm-01')."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Irrigation",
+      "item": [
+        {
+          "name": "Record Irrigation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"farm_id\": \"farm-01\",\n  \"duration_minutes\": 15,\n  \"timestamp\": \"2025-02-18T11:00:00Z\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/irrigation",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "irrigation"]
+            },
+            "description": "Record a new irrigation event. Timestamp is optional."
+          }
+        },
+        {
+          "name": "Get Irrigation History",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/irrigation/{{farmId}}?limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "irrigation", "{{farmId}}"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Get recent irrigation events for a farm."
+          }
+        }
+      ]
+    }
+  ]
+}
