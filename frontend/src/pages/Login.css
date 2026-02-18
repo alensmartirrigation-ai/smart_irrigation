@@ -97,14 +97,14 @@ body {
 }
 
 .isp-brand-name {
-  font-size: 24px;
+  font-size: 30px;
   font-weight: 700;
   margin-bottom: 8px;
   color: var(--nm-text);
 }
 
 .isp-brand-tagline {
-  font-size: 15px;
+  font-size: 18px;
   color: var(--nm-text-light);
 }
 
@@ -117,7 +117,7 @@ body {
   box-shadow: 4px 4px 8px var(--nm-shadow),
               -4px -4px 8px var(--nm-light);
   font-family: 'Roboto Mono', monospace;
-  font-size: 12px;
+  font-size: 14px;
   color: var(--nm-accent);
   font-weight: 600;
 }
@@ -133,7 +133,7 @@ body {
 }
 
 .isp-card-title {
-  font-size: 28px;
+  font-size: 34px;
   font-weight: 700;
   margin-bottom: 8px;
   color: var(--nm-text);
@@ -141,7 +141,7 @@ body {
 }
 
 .isp-card-sub {
-  font-size: 15px;
+  font-size: 18px;
   color: var(--nm-text-light);
   margin-bottom: 40px;
   text-align: center;
@@ -155,7 +155,7 @@ body {
 
 .isp-label {
   display: block;
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--nm-text-light);
   margin-bottom: 12px;
@@ -170,7 +170,7 @@ body {
   background: var(--nm-bg);
   box-shadow: inset 6px 6px 12px var(--nm-shadow),
               inset -6px -6px 12px var(--nm-light);
-  font-size: 16px;
+  font-size: 18px;
   color: var(--nm-text);
   outline: none;
   transition: box-shadow 0.3s ease;
@@ -200,7 +200,7 @@ body {
   border-radius: 20px;
   border: none;
   font-weight: 700;
-  font-size: 16px;
+  font-size: 18px;
   color: var(--nm-accent);
   background: var(--nm-bg);
   box-shadow: 8px 8px 16px var(--nm-shadow),
@@ -230,6 +230,6 @@ body {
 .isp-footer {
   text-align: center;
   padding: 32px;
-  font-size: 14px;
+  font-size: 16px;
   color: var(--nm-text-light);
 }
