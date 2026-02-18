@@ -44,7 +44,7 @@ services:
     ports:
       - "${API_PORT}:8080"
     environment:
-      - SERVER_URL=http://localhost:${API_PORT}
+      - SERVER_URL=http://20.197.17.201:${API_PORT}
       - AUTHENTICATION_TYPE=apikey
       - AUTHENTICATION_API_KEY=${API_KEY}
       - DATABASE_ENABLED=true
