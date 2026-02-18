@@ -22,6 +22,8 @@ const server = app.listen(env.PORT, async () => {
 
   whatsappService.setIO(io);
   await userService.init();
+  const farmService = require('./services/farmService');
+  await farmService.seedFarm();
   await whatsappService.init();
 
   io.on('connection', (socket) => {

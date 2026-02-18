@@ -1,3 +1,4 @@
+const Farm = require('../models/Farm');
 const { influxQueryApi, influxBucket } = require('../config/influxClient');
 const logger = require('../utils/logger');
 const { getActiveAlerts } = require('./alertService');
@@ -10,6 +11,21 @@ const sanitizeId = (value) => {
     throw new Error('farmId contains invalid characters');
   }
   return value;
+};
+
+const seedFarm = async () => {
+    try {
+        if (await Farm.count() === 0) {
+            await Farm.create({
+                name: 'Main Farm',
+                message_platform: 'whatsapp',
+                connection_status: 'disconnected'
+            });
+            logger.info('Default farm seeded in PostgreSQL');
+        }
+    } catch (error) {
+        logger.error('Failed to seed farm', { error: error.message });
+    }
 };
 
 const toPositiveInt = (value, fallback, max = 500) => {
@@ -169,11 +185,65 @@ from(bucket: "${influxBucket}")
     sensor_id: row.sensor_id,
     temperature: row.temperature,
     humidity: row.humidity,
-    soil_moisture: row.soil_moisture,
   }));
 };
 
+const getFarms = async () => {
+    try {
+        return await Farm.findAll();
+    } catch (error) {
+        logger.error('Failed to get farms', { error: error.message });
+        return [];
+    }
+};
+
+const createFarm = async (name) => {
+    try {
+        const farm = await Farm.create({ name });
+        logger.info('Farm created', { id: farm.id, name: farm.name });
+        return farm;
+    } catch (error) {
+        logger.error('Failed to create farm', { error: error.message });
+        throw error;
+    }
+};
+
+const updateFarmConnection = async (farmId, platform, status, credentials = {}) => {
+    try {
+        const farm = await Farm.findByPk(farmId);
+        if (!farm) throw new Error('Farm not found');
+        
+        farm.message_platform = platform;
+        farm.connection_status = status;
+        farm.credentials = credentials;
+        
+        await farm.save();
+        logger.info('Farm connection updated', { farmId, status });
+        return farm;
+    } catch (error) {
+        logger.error('Failed to update farm connection', { farmId, error: error.message });
+        throw error;
+    }
+};
+
+const deleteFarm = async (farmId) => {
+    try {
+        const farm = await Farm.findByPk(farmId);
+        if (!farm) throw new Error('Farm not found');
+        await farm.destroy();
+        logger.info('Farm deleted', { farmId });
+        return true;
+    } catch (error) {
+        logger.error('Failed to delete farm', { farmId, error: error.message });
+        throw error;
+    }
+};
+
 module.exports = {
+  getFarms,
+  createFarm,
+  updateFarmConnection,
+  deleteFarm,
   getFarmContext,
   sanitizeId,
   queryLatest,

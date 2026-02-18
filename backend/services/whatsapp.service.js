@@ -101,12 +101,22 @@ class WhatsAppService {
         this.qrCode = null;
         logger.info('WhatsApp connection opened');
         
-        // Update Admin WhatsApp Details
-        /* if (this.sock?.user) {
-            const { id, name } = this.sock.user;
-            const jid = id.split(':')[0] + '@s.whatsapp.net'; // Normalized JID
-            await userService.updateAdminWhatsAppDetails(jid, name);
-        } */
+        // Update Farm WhatsApp Connection Details
+        const farmService = require('./farmService'); // Lazy require to avoid circular dep if any
+        try {
+            const farms = await farmService.getFarms();
+            if (farms.length > 0) {
+                const primaryFarm = farms[0];
+                await farmService.updateFarmConnection(
+                    primaryFarm.id, 
+                    'whatsapp', 
+                    'connected', 
+                    this.sock?.user || {}
+                );
+            }
+        } catch (err) {
+            logger.error('Failed to update farm connection status', { error: err.message });
+        }
 
         if (this.io) {
           this.io.emit('whatsapp_status', this.status);
