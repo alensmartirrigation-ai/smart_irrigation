@@ -37,11 +37,8 @@ const Login = () => {
 
   return (
     <div className="isp-page">
-        <div className="isp-blob isp-blob-1" />
-        <div className="isp-blob isp-blob-2" />
-
-        <div className="isp-main">
-          <div className="isp-container">
+      <div className="isp-main">
+        <div className="isp-container">
             <div className="isp-brand-card">
               <img src={logo} alt="Smart Irrigation System Logo" className="isp-logo" />
               <div className="isp-brand-name">Smart Irrigation System</div>
