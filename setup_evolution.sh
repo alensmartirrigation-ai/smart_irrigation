@@ -5,7 +5,7 @@ set -euo pipefail
 EVO_DIR="$HOME/evolution-api"
 API_PORT=8080
 API_KEY="8651c188-cf60-4761-9e55-4c911094dcab"
-DB_PASS="evolution_pass_$(openssl rand -hex 4)"
+DB_PASS="evolution_secret_pass_123"
 
 echo "🚀 Starting Evolution API v2 Deployment..."
 
@@ -16,8 +16,6 @@ cd "$EVO_DIR"
 # 2. Generate docker-compose.yml
 echo "📦 Generating docker-compose.yml..."
 cat <<EOF > docker-compose.yml
-version: '3.8'
-
 services:
   evolution_db:
     image: postgres:15-alpine
