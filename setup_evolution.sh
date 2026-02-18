@@ -48,7 +48,7 @@ services:
       - evolution_net
 
   evolution_api:
-    image: atendai/evolution-api:v2.2.3
+    image: atendai/evolution-api:v2.1.1
     container_name: evolution_api
     restart: always
     ports:
@@ -61,6 +61,7 @@ services:
       - DATABASE_PROVIDER=postgresql
       - DATABASE_CONNECTION_URI=postgresql://evolution:${DB_PASS}@evolution_db:5432/evolution?schema=public
       - DATABASE_CONNECTION_CLIENT_NAME=evolution_api
+      - RECONNECT_SESSION_ON_CLOSE=false
       - CACHE_REDIS_ENABLED=false
       - CACHE_REDIS_URI=redis://evolution_redis:6379
       - CACHE_REDIS_PREFIX=EVO
