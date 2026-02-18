@@ -30,13 +30,7 @@ class UserService {
           name: config.admin.name,
           username: config.admin.username,
           password: config.admin.password,
-          role: 'admin',
-          farmName: config.admin.farmName,
-          whatsapp: {
-            jid: '',
-            name: '',
-            connectedAt: null
-          }
+          role: 'admin'
         });
         logger.info('Default admin user seeded in PostgreSQL');
       }
@@ -58,12 +52,11 @@ class UserService {
     }
   }
 
-  async saveAdminInfo(name, farmName) {
+  async saveAdminInfo(name) {
     try {
       const admin = await User.findOne({ where: { role: 'admin' } });
       if (admin) {
         admin.name = name;
-        admin.farmName = farmName;
         await admin.save();
         const { password, ...adminInfo } = admin.toJSON();
         return adminInfo;
@@ -72,23 +65,6 @@ class UserService {
     } catch (error) {
       logger.error('Failed to save admin info', { error: error.message });
       return null;
-    }
-  }
-
-  async updateAdminWhatsAppDetails(jid, platformName) {
-    try {
-      const admin = await User.findOne({ where: { role: 'admin' } });
-      if (admin) {
-        admin.whatsapp = {
-          jid,
-          name: platformName || 'Unknown',
-          connectedAt: new Date().toISOString()
-        };
-        await admin.save();
-        logger.info('Admin WhatsApp details updated in PostgreSQL', { jid });
-      }
-    } catch (error) {
-      logger.error('Failed to update admin WhatsApp details', { error: error.message });
     }
   }
 
@@ -153,6 +129,40 @@ class UserService {
       return newUser.toJSON();
     } catch (error) {
       logger.error('Failed to add user', { error: error.message });
+      throw error;
+    }
+  }
+
+  async updateUser(id, details) {
+    try {
+      const user = await User.findByPk(id);
+      if (!user) throw new Error('User not found');
+      
+      const { name, phone, username, password } = details;
+      if (name) user.name = name;
+      if (phone) user.phone = phone;
+      if (username) user.username = username;
+      if (password) user.password = password;
+      
+      await user.save();
+      const { password: _, ...userInfo } = user.toJSON();
+      return userInfo;
+    } catch (error) {
+      logger.error('Failed to update user', { error: error.message });
+      throw error;
+    }
+  }
+
+  async deleteUser(id) {
+    try {
+      const user = await User.findByPk(id);
+      if (!user) throw new Error('User not found');
+      if (user.role === 'admin') throw new Error('Cannot delete admin user');
+      
+      await user.destroy();
+      return true;
+    } catch (error) {
+      logger.error('Failed to delete user', { error: error.message });
       throw error;
     }
   }

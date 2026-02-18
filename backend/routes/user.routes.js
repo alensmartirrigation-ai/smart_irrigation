@@ -17,12 +17,12 @@ router.get('/admin/info', async (req, res) => {
 // Update Admin Info
 router.post('/admin/setup', async (req, res) => {
   try {
-    const { name, farmName } = req.body;
-    if (!name || !farmName) {
-      return res.status(400).json({ error: 'Name and Farm Name are required' });
+    const { name } = req.body;
+    if (!name) {
+      return res.status(400).json({ error: 'Name is required' });
     }
-    const info = await userService.saveAdminInfo(name, farmName);
-    logger.info('Admin info updated', { name, farmName });
+    const info = await userService.saveAdminInfo(name);
+    logger.info('Admin info updated', { name });
     res.json({ message: 'Admin info saved successfully', info });
   } catch (error) {
     logger.error('Failed to save admin info', { error: error.message });
@@ -53,6 +53,30 @@ router.post('/users', async (req, res) => {
     res.status(201).json({ message: 'User added successfully', user: newUser });
   } catch (error) {
     logger.error('Failed to add user', { error: error.message });
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Update User
+router.put('/users/:id', async (req, res) => {
+  try {
+    const updatedUser = await userService.updateUser(req.params.id, req.body);
+    logger.info('User updated', { id: req.params.id });
+    res.json({ message: 'User updated successfully', user: updatedUser });
+  } catch (error) {
+    logger.error('Failed to update user', { id: req.params.id, error: error.message });
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Delete User
+router.delete('/users/:id', async (req, res) => {
+  try {
+    await userService.deleteUser(req.params.id);
+    logger.info('User deleted', { id: req.params.id });
+    res.json({ message: 'User deleted successfully' });
+  } catch (error) {
+    logger.error('Failed to delete user', { id: req.params.id, error: error.message });
     res.status(400).json({ error: error.message });
   }
 });

@@ -102,11 +102,11 @@ class WhatsAppService {
         logger.info('WhatsApp connection opened');
         
         // Update Admin WhatsApp Details
-        if (this.sock?.user) {
+        /* if (this.sock?.user) {
             const { id, name } = this.sock.user;
             const jid = id.split(':')[0] + '@s.whatsapp.net'; // Normalized JID
             await userService.updateAdminWhatsAppDetails(jid, name);
-        }
+        } */
 
         if (this.io) {
           this.io.emit('whatsapp_status', this.status);

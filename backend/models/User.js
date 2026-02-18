@@ -24,13 +24,6 @@ const User = sequelize.define('User', {
     type: DataTypes.ENUM('admin', 'user'),
     defaultValue: 'user'
   },
-  farmName: {
-    type: DataTypes.STRING
-  },
-  whatsapp: {
-    type: DataTypes.JSONB,
-    defaultValue: {}
-  },
   phone: {
     type: DataTypes.STRING,
     unique: true
