@@ -1,6 +1,10 @@
+const bcrypt = require('bcrypt');
+const { Op } = require('sequelize');
 const { User, Farm, UserFarm, sequelize } = require('../models');
 const logger = require('../utils/logger');
 const config = require('../config/default');
+
+const SALT_ROUNDS = 10;
 
 class UserService {
   constructor() {}
@@ -9,102 +13,80 @@ class UserService {
     try {
       await sequelize.authenticate();
       logger.info('Database connection established successfully.');
-      
+
       // Sync models
       await sequelize.sync({ alter: true });
       logger.info('Database models synchronized.');
 
       await this.seedAdmin();
     } catch (error) {
-      logger.error('Unable to connect to the database:', { error: error.message });
+      logger.error('Database initialization failed', { error: error.message });
       throw error;
     }
   }
 
   async seedAdmin() {
     try {
-      const adminCount = await User.count({ where: { role: 'admin' } });
-      if (adminCount === 0) {
+      if (!config.admin?.phone || !config.admin?.password) {
+        logger.warn('Admin config missing. Skipping admin seed.');
+        return;
+      }
+
+      const normalizedPhone = config.admin.phone.replace(/\D/g, '');
+
+      const existingAdmin = await User.findOne({
+        where: { phone: normalizedPhone }
+      });
+
+      if (!existingAdmin) {
+        const hashedPassword = await bcrypt.hash(config.admin.password, SALT_ROUNDS);
+
         await User.create({
-          name: config.admin.name,
-          username: config.admin.username,
-          password: config.admin.password,
+          name: config.admin.name || 'Admin',
+          username: normalizedPhone,
+          phone: normalizedPhone,
+          password: hashedPassword,
           role: 'admin'
         });
-        logger.info('Default admin user seeded in PostgreSQL');
+
+        logger.info('Default admin seeded securely');
       }
+
     } catch (error) {
-      logger.error('Failed to seed admin user', { error: error.message });
+      logger.error('Failed to seed admin', { error: error.message });
     }
   }
 
-  async getAdminInfo() {
+  async authenticate(identifier, password) {
     try {
-      const admin = await User.findOne({ 
-        where: { role: 'admin' },
-        attributes: { exclude: ['password'] }
-      });
-      return admin ? admin.toJSON() : null;
-    } catch (error) {
-      logger.error('Failed to get admin info', { error: error.message });
-      return null;
-    }
-  }
+      if (!identifier || !password) return null;
 
-  async saveAdminInfo(name) {
-    try {
-      const admin = await User.findOne({ where: { role: 'admin' } });
-      if (admin) {
-        admin.name = name;
-        await admin.save();
-        const { password, ...adminInfo } = admin.toJSON();
-        return adminInfo;
-      }
-      return null;
-    } catch (error) {
-      logger.error('Failed to save admin info', { error: error.message });
-      return null;
-    }
-  }
+      const normalizedPhone = identifier.replace(/\D/g, '');
 
-  async authenticate(username, password) {
-    try {
       const user = await User.findOne({
         where: {
-          [sequelize.Sequelize.Op.or]: [
-            { username: username },
-            { phone: username }
+          [Op.or]: [
+            { username: identifier },
+            { phone: normalizedPhone }
           ]
         }
       });
 
-      if (user && user.password === password) {
-        const { password, ...userInfo } = user.toJSON();
-        return userInfo;
-      }
-      return null;
+      if (!user) return null;
+
+      const isValid = await bcrypt.compare(password, user.password);
+      if (!isValid) return null;
+
+      const { password: _, ...userInfo } = user.toJSON();
+      return userInfo;
+
     } catch (error) {
       logger.error('Authentication failed', { error: error.message });
       return null;
     }
   }
 
-  async updatePassword(username, newPassword) {
-    try {
-      const user = await User.findOne({ where: { username } });
-      if (user) {
-        user.password = newPassword;
-        await user.save();
-        return true;
-      }
-      return false;
-    } catch (error) {
-      logger.error('Failed to update password', { error: error.message });
-      return false;
-    }
-  }
-
-  async addUser(name, phone) {
+  async addUser(name, phone, role = 'user') {
     try {
       if (!name || !phone) {
         throw new Error('Name and phone are required');
@@ -112,22 +94,53 @@ class UserService {
 
       const normalizedPhone = phone.replace(/\D/g, '');
 
-      const exists = await User.findOne({ where: { phone: normalizedPhone } });
-      if (exists) {
+      const existingUser = await User.findOne({
+        where: {
+          [Op.or]: [
+            { phone: normalizedPhone },
+            { username: normalizedPhone }
+          ]
+        }
+      });
+
+      if (existingUser) {
         throw new Error('User with this phone number already exists');
       }
+
+      // Default password for new users is their phone number
+      const hashedPassword = await bcrypt.hash(normalizedPhone, SALT_ROUNDS);
 
       const newUser = await User.create({
         name,
         phone: normalizedPhone,
-        role: 'user',
         username: normalizedPhone,
-        password: normalizedPhone
+        password: hashedPassword,
+        role
       });
 
-      return newUser.toJSON();
+      const { password: _, ...userInfo } = newUser.toJSON();
+      return userInfo;
+
     } catch (error) {
       logger.error('Failed to add user', { error: error.message });
+      throw error;
+    }
+  }
+
+  async updatePassword(userId, newPassword) {
+    try {
+      if (!newPassword) throw new Error('New password required');
+
+      const user = await User.findByPk(userId);
+      if (!user) throw new Error('User not found');
+
+      user.password = await bcrypt.hash(newPassword, SALT_ROUNDS);
+      await user.save();
+
+      return true;
+
+    } catch (error) {
+      logger.error('Failed to update password', { error: error.message });
       throw error;
     }
   }
@@ -136,16 +149,34 @@ class UserService {
     try {
       const user = await User.findByPk(id);
       if (!user) throw new Error('User not found');
-      
-      const { name, phone, username, password } = details;
+
+      const { name, phone, role } = details;
+
       if (name) user.name = name;
-      if (phone) user.phone = phone;
-      if (username) user.username = username;
-      if (password) user.password = password;
-      
+
+      if (phone) {
+        const normalizedPhone = phone.replace(/\D/g, '');
+
+        const exists = await User.findOne({
+          where: {
+            phone: normalizedPhone,
+            id: { [Op.ne]: id }
+          }
+        });
+
+        if (exists) throw new Error('Phone already in use');
+
+        user.phone = normalizedPhone;
+        user.username = normalizedPhone;
+      }
+
+      if (role) user.role = role;
+
       await user.save();
+
       const { password: _, ...userInfo } = user.toJSON();
       return userInfo;
+
     } catch (error) {
       logger.error('Failed to update user', { error: error.message });
       throw error;
@@ -156,10 +187,10 @@ class UserService {
     try {
       const user = await User.findByPk(id);
       if (!user) throw new Error('User not found');
-      if (user.role === 'admin') throw new Error('Cannot delete admin user');
-      
+
       await user.destroy();
       return true;
+
     } catch (error) {
       logger.error('Failed to delete user', { error: error.message });
       throw error;
@@ -204,10 +235,27 @@ class UserService {
         attributes: { exclude: ['password'] },
         include: [{ model: Farm, through: { attributes: [] } }]
       });
-      return users.map(u => u.toJSON());
+
+      return users.map(user => user.toJSON());
+
     } catch (error) {
       logger.error('Failed to get users', { error: error.message });
       return [];
+    }
+  }
+
+  async getUserById(id) {
+    try {
+      const user = await User.findByPk(id, {
+        attributes: { exclude: ['password'] },
+        include: [{ model: Farm, through: { attributes: [] } }]
+      });
+
+      return user ? user.toJSON() : null;
+
+    } catch (error) {
+      logger.error('Failed to fetch user', { error: error.message });
+      return null;
     }
   }
 }
