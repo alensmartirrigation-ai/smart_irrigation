@@ -235,7 +235,34 @@ class SessionManager {
             const textContent = msg.message.conversation || msg.message.extendedTextMessage?.text;
             
             if (textContent) {
-            // Simple command detection for pump control
+              // Simple command detection for pump control
+              const lower = textContent.toLowerCase();
+              if (lower.includes('turn on pump')) {
+                // Attempt to find a device for this farm and start irrigation
+                const { Device } = require('../models');
+                try {
+                  const device = await Device.findOne({ where: { farm_id: farmId } });
+                  if (device) {
+                    await this.startIrrigationForDevice(device.id);
+                    await this.sendMessage(farmId, remoteJid, '✅ Pump turned on for device ' + device.id);
+                    continue; // skip AI processing for this message
+                  }
+                } catch (e) {
+                  logger.error('Failed to start pump via WhatsApp command', { error: e.message });
+                  await this.sendMessage(farmId, remoteJid, '⚠️ Failed to turn on pump.');
+                  continue;
+                }
+              }
+              // Existing AI handling
+              try {
+                const reply = await aiService.generateResponse(textContent, [], { conversationId: `${farmId}:${remoteJid}`, farmId: farmId });
+                await this.sendMessage(farmId, remoteJid, reply);
+              } catch (error) {
+                logger.error('Failed to send AI auto-reply', { farmId, error: error.message });
+              }
+              logger.info(`📩 Received from ${remoteJid} for farm ${farmId}: ${textContent}`);
+            }
+            // Duplicate pump command handling removed
             const lower = textContent.toLowerCase();
             if (lower.includes('turn on pump')) {
               // Attempt to find a device for this farm and start irrigation
