@@ -62,22 +62,37 @@ const DeviceList = ({ selectedFarm }) => {
   };
 
   const handleIrrigate = async (e, id) => {
-    e.stopPropagation();
-    const duration = durations[id] || 60;
-    setIrrigationLoading(prev => ({ ...prev, [id]: true }));
-    try {
-      const token = localStorage.getItem('token');
-      await axios.post(`/api/devices/${id}/start-irrigation`, { duration: parseInt(duration) }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      fetchDevices(); // Refresh to get updated status
-    } catch (err) {
-      console.error('Irrigation failed:', err);
-      alert(err.response?.data?.error || 'Failed to trigger irrigation');
-    } finally {
-      setIrrigationLoading(prev => ({ ...prev, [id]: false }));
-    }
-  };
+  e.stopPropagation();
+  const duration = durations[id] || 60;
+  setIrrigationLoading(prev => ({ ...prev, [id]: true }));
+  try {
+    const token = localStorage.getItem('token');
+    await axios.post(`/api/devices/${id}/start-irrigation`, { duration: parseInt(duration) }, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    // Optimistically update UI state
+    setDevices(prevDevices => prevDevices.map(dev => {
+      if (dev.id === id) {
+        return {
+          ...dev,
+          DeviceIrrigationStatus: {
+            ...dev.DeviceIrrigationStatus,
+            last_irrigated_at: new Date().toISOString(),
+            last_duration_seconds: parseInt(duration)
+          }
+        };
+      }
+      return dev;
+    }));
+    // Optionally refresh from server for consistency
+    fetchDevices();
+  } catch (err) {
+    console.error('Irrigation failed:', err);
+    alert(err.response?.data?.error || 'Failed to trigger irrigation');
+  } finally {
+    setIrrigationLoading(prev => ({ ...prev, [id]: false }));
+  }
+};;
 
   const handleStopIrrigation = async (e, id) => {
     e.stopPropagation();
