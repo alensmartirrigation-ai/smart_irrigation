@@ -1,4 +1,4 @@
-const { Device, Farm, FarmDevice } = require('../models');
+const { Device, Farm, FarmDevice, DeviceIrrigationStatus } = require('../models');
 const deviceService = require('../services/device.service');
 const logger = require('../utils/logger');
 
@@ -54,6 +54,10 @@ const getAllDevices = async (req, res, next) => {
         through: { attributes: [] }
       });
     }
+
+    include.push({
+      model: DeviceIrrigationStatus
+    });
 
     const devices = await Device.findAll({
       where,
@@ -172,6 +176,17 @@ const startIrrigation = async (req, res, next) => {
   }
 };
 
+const stopIrrigation = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const result = await deviceService.stopIrrigation(id);
+    res.status(200).json(result);
+  } catch (error) {
+    logger.error(`Failed to stop irrigation for device ${req.params.id}`, { error: error.message });
+    next(error);
+  }
+};
+
 const updateThreshold = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -203,5 +218,6 @@ module.exports = {
   getDeviceReadings,
   getDeviceIrrigation,
   startIrrigation,
+  stopIrrigation,
   updateThreshold
 };

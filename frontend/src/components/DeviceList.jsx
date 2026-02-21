@@ -14,6 +14,8 @@ const DeviceList = ({ selectedFarm }) => {
   const [editingDevice, setEditingDevice] = useState(null);
   const [selectedDeviceForGraph, setSelectedDeviceForGraph] = useState(null);
   const [isGraphModalOpen, setIsGraphModalOpen] = useState(false);
+  const [irrigationLoading, setIrrigationLoading] = useState({});
+  const [durations, setDurations] = useState({});
 
   useEffect(() => {
     fetchDevices();
@@ -57,6 +59,45 @@ const DeviceList = ({ selectedFarm }) => {
     } catch (err) {
       alert(err.response?.data?.error || 'Failed to delete device');
     }
+  };
+
+  const handleIrrigate = async (e, id) => {
+    e.stopPropagation();
+    const duration = durations[id] || 60;
+    setIrrigationLoading(prev => ({ ...prev, [id]: true }));
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(`/api/devices/${id}/start-irrigation`, { duration: parseInt(duration) }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      fetchDevices(); // Refresh to get updated status
+    } catch (err) {
+      console.error('Irrigation failed:', err);
+      alert(err.response?.data?.error || 'Failed to trigger irrigation');
+    } finally {
+      setIrrigationLoading(prev => ({ ...prev, [id]: false }));
+    }
+  };
+
+  const handleStopIrrigation = async (e, id) => {
+    e.stopPropagation();
+    setIrrigationLoading(prev => ({ ...prev, [id]: true }));
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(`/api/devices/${id}/stop-irrigation`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      fetchDevices();
+    } catch (err) {
+      console.error('Stop irrigation failed:', err);
+      alert(err.response?.data?.error || 'Failed to stop irrigation');
+    } finally {
+      setIrrigationLoading(prev => ({ ...prev, [id]: false }));
+    }
+  };
+
+  const handleDurationChange = (id, value) => {
+    setDurations(prev => ({ ...prev, [id]: value }));
   };
 
   const handleEdit = (e, device) => {
@@ -146,6 +187,54 @@ const DeviceList = ({ selectedFarm }) => {
                   <span>Threshold: {device.moisture_threshold}%</span>
                 </div>
               </div>
+
+              <div className="device-card-center" onClick={(e) => e.stopPropagation()}>
+                {device.DeviceIrrigationStatus?.last_irrigated_at && (
+                  <div className="irrigation-status-info">
+                    {new Date(device.DeviceIrrigationStatus.last_irrigated_at).getTime() + (device.DeviceIrrigationStatus.last_duration_seconds * 1000) > Date.now() ? (
+                      <span className="pulsing-droplet">Irrigating...</span>
+                    ) : (
+                      <span>Last: {new Date(device.DeviceIrrigationStatus.last_irrigated_at).toLocaleTimeString()}</span>
+                    )}
+                  </div>
+                )}
+                
+                <div className="irrigation-controls">
+                  <input 
+                    type="number" 
+                    className="duration-input-nm"
+                    placeholder="Secs"
+                    value={durations[device.id] || 60}
+                    onChange={(e) => handleDurationChange(device.id, e.target.value)}
+                    min="1"
+                    disabled={irrigationLoading[device.id]}
+                  />
+                  <button 
+                    className={`irrigate-btn-nm ${irrigationLoading[device.id] ? 'loading' : ''} ${device.DeviceIrrigationStatus?.last_irrigated_at && new Date(device.DeviceIrrigationStatus.last_irrigated_at).getTime() + (device.DeviceIrrigationStatus.last_duration_seconds * 1000) > Date.now() ? 'stop' : 'start'}`}
+                    onClick={(e) => {
+                      const isIrrigating = device.DeviceIrrigationStatus?.last_irrigated_at && new Date(device.DeviceIrrigationStatus.last_irrigated_at).getTime() + (device.DeviceIrrigationStatus.last_duration_seconds * 1000) > Date.now();
+                      if (isIrrigating) {
+                        handleStopIrrigation(e, device.id);
+                      } else {
+                        handleIrrigate(e, device.id);
+                      }
+                    }}
+                    disabled={irrigationLoading[device.id]}
+                    title={device.DeviceIrrigationStatus?.last_irrigated_at && new Date(device.DeviceIrrigationStatus.last_irrigated_at).getTime() + (device.DeviceIrrigationStatus.last_duration_seconds * 1000) > Date.now() ? 'Stop Irrigation' : 'Start Irrigation'}
+                  >
+                    {irrigationLoading[device.id] ? (
+                      <RefreshCw size={14} className="spinning" />
+                    ) : (
+                      device.DeviceIrrigationStatus?.last_irrigated_at && new Date(device.DeviceIrrigationStatus.last_irrigated_at).getTime() + (device.DeviceIrrigationStatus.last_duration_seconds * 1000) > Date.now() ? <RefreshCw size={14} /> : <Droplets size={14} />
+                    )}
+                    <span>{device.DeviceIrrigationStatus?.last_irrigated_at && new Date(device.DeviceIrrigationStatus.last_irrigated_at).getTime() + (device.DeviceIrrigationStatus.last_duration_seconds * 1000) > Date.now() ? 'Stop' : 'Start'}</span>
+                  </button>
+                </div>
+              </div>
+              
+              <div className="device-actions-row" onClick={(e) => e.stopPropagation()}>
+              </div>
+
               <button className="edit-btn-nm" onClick={(e) => handleEdit(e, device)}>
                 <Edit size={16} />
               </button>

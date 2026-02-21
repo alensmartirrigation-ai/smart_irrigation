@@ -289,6 +289,28 @@
           }
         },
         {
+          "name": "Stop Irrigation (Remote Toggle)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/devices/fc9dd0ac-558c-460b-ab78-28efacc0256c/stop-irrigation",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "devices", "fc9dd0ac-558c-460b-ab78-28efacc0256c", "stop-irrigation"]
+            },
+            "description": "Stop current irrigation on the ESP32 remotely."
+          }
+        },
+        {
           "name": "Get Irrigation History",
           "request": {
             "method": "GET",

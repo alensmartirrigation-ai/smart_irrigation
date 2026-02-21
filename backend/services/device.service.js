@@ -168,9 +168,34 @@ const startIrrigation = async (deviceId, duration) => {
   }
 };
 
+const stopIrrigation = async (deviceId) => {
+  try {
+    const device = await Device.findByPk(deviceId);
+    if (!device) {
+      throw new Error('Device not found');
+    }
+
+    logger.info(`Queuing stop irrigation command for device ${deviceId}`);
+
+    // Queue command for polling device
+    const { DeviceCommand } = require('../models');
+    await DeviceCommand.create({
+      device_id: deviceId,
+      command: 'STOP_IRRIGATION',
+      status: 'PENDING'
+    });
+
+    return { status: 'success', message: 'Stop irrigation command queued for device', deviceId };
+  } catch (err) {
+    logger.error(`Failed to queue stop irrigation for device ${deviceId}`, { error: err.message });
+    throw err;
+  }
+};
+
 module.exports = {
   ingestReading,
   getReadings,
   getIrrigationData,
-  startIrrigation
+  startIrrigation,
+  stopIrrigation
 };
