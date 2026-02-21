@@ -1,5 +1,6 @@
 const { influxQueryApi, influxBucket } = require("../config/influxClient");
 const { sanitizeId } = require("./farmService");
+const { startIrrigation, stopIrrigation } = require("./device.service");
 const env = require("../config/env");
 
 const ALLOWED_METRICS = ["temperature", "humidity", "soil_moisture"];
@@ -61,6 +62,16 @@ async function queryInfluxData(args) {
   };
 }
 
+async function handleStartIrrigation(args) {
+  const { device_id, duration_seconds } = args;
+  return await startIrrigation(device_id, duration_seconds);
+}
+
+async function handleStopIrrigation(args) {
+  const { device_id } = args;
+  return await stopIrrigation(device_id);
+}
+
 const tools = [
   {
     definition: {
@@ -87,6 +98,41 @@ const tools = [
       }
     },
     handler: queryInfluxData
+  },
+  {
+    definition: {
+      type: "function",
+      function: {
+        name: "start_irrigation",
+        description: "Start irrigation for a specific device",
+        parameters: {
+          type: "object",
+          properties: {
+            device_id: { type: "string" },
+            duration_seconds: { type: "integer", minimum: 1, default: 60 }
+          },
+          required: ["device_id"]
+        }
+      }
+    },
+    handler: handleStartIrrigation
+  },
+  {
+    definition: {
+      type: "function",
+      function: {
+        name: "stop_irrigation",
+        description: "Stop irrigation for a specific device",
+        parameters: {
+          type: "object",
+          properties: {
+            device_id: { type: "string" }
+          },
+          required: ["device_id"]
+        }
+      }
+    },
+    handler: handleStopIrrigation
   }
 ];
 

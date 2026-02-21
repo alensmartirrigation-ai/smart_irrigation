@@ -27,7 +27,8 @@ class AIService {
           role: "system",
           content:
             "You are a smart irrigation assistant. " +
-            "When users request farm data, call the tool. " +
+            "You can fetch farm sensor data and control irrigation (start/stop) for specific devices. " +
+            "When users request data or want to toggle irrigation, call the appropriate tool. " +
             "For unrelated queries respond: not in context."
         },
         { role: "user", content: userMessage }
