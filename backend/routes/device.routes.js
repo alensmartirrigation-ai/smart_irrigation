@@ -9,5 +9,7 @@ router.put('/devices/:id', deviceController.updateDevice);
 router.delete('/devices/:id', deviceController.deleteDevice);
 router.get('/devices/:id/readings', deviceController.getDeviceReadings);
 router.get('/devices/:id/irrigation', deviceController.getDeviceIrrigation);
+router.post('/devices/:id/start-irrigation', deviceController.startIrrigation);
+router.patch('/devices/:id/threshold', deviceController.updateThreshold);
 
 module.exports = router;

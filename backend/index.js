@@ -10,9 +10,17 @@ const whatsappService = require('./services/whatsapp.service');
 const farmService = require('./services/farmService');
 const userService = require('./services/userService');
 const logger = require('./utils/logger');
+const { sequelize } = require('./models');
 
 const server = app.listen(env.PORT, async () => {
   logger.info('Server listening', { port: env.PORT, env: env.NODE_ENV });
+  
+  try {
+    await sequelize.sync();
+    logger.info('Database synced');
+  } catch (err) {
+    logger.error('Database sync failed', { error: err.message });
+  }
   
   // Initialize Socket.io
   const io = new Server(server, {

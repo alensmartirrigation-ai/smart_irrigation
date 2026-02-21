@@ -13,7 +13,8 @@ const createDevice = async (req, res, next) => {
     const device = await Device.create({
       device_name,
       model,
-      location
+      location,
+      moisture_threshold: req.body.moisture_threshold || 30
     });
 
     if (farmId) {
@@ -100,7 +101,8 @@ const updateDevice = async (req, res, next) => {
     await device.update({
       device_name,
       model,
-      location
+      location,
+      moisture_threshold: req.body.moisture_threshold !== undefined ? req.body.moisture_threshold : device.moisture_threshold
     });
 
     res.status(200).json({ status: 'success', data: device });
@@ -153,6 +155,45 @@ const deleteDevice = async (req, res, next) => {
   }
 };
 
+const startIrrigation = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { duration } = req.body;
+
+    if (!duration) {
+      return res.status(400).json({ error: 'Duration is required' });
+    }
+
+    const result = await deviceService.startIrrigation(id, duration);
+    res.status(200).json(result);
+  } catch (error) {
+    logger.error(`Failed to start irrigation for device ${req.params.id}`, { error: error.message });
+    next(error);
+  }
+};
+
+const updateThreshold = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { moisture_threshold } = req.body;
+
+    if (moisture_threshold === undefined) {
+      return res.status(400).json({ error: 'moisture_threshold is required' });
+    }
+
+    const device = await Device.findByPk(id);
+    if (!device) {
+      return res.status(404).json({ error: 'Device not found' });
+    }
+
+    await device.update({ moisture_threshold });
+    res.status(200).json({ status: 'success', data: device });
+  } catch (error) {
+    logger.error(`Failed to update threshold for device ${req.params.id}`, { error: error.message });
+    next(error);
+  }
+};
+
 module.exports = {
   createDevice,
   getAllDevices,
@@ -160,5 +201,7 @@ module.exports = {
   updateDevice,
   deleteDevice,
   getDeviceReadings,
-  getDeviceIrrigation
+  getDeviceIrrigation,
+  startIrrigation,
+  updateThreshold
 };

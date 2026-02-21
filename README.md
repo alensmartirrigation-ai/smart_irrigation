@@ -33,5 +33,10 @@ This repository is split into independent layers:
   npm run build
   ```
 
-## CI
-GitHub Actions validates backend and frontend in separate jobs from their respective folders.
+## Firmware
+- Location: `/Users/jebin.koshy/Desktop/smart_irrigation/firmware/main`
+- Device: ESP32
+- Libraries required:
+  - `DHT sensor library` by Adafruit
+  - `ArduinoJson` by Benoit Blanchon
+- Description: Reads temperature, humidity, and soil moisture, controls a relay based on soil levels, and pushes data to the backend API every 5 seconds.

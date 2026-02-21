@@ -172,6 +172,27 @@ from(bucket: "${influxBucket}")
     sensor_id: row.sensor_id,
     temperature: row.temperature,
     humidity: row.humidity,
+    soil_moisture: row.soil_moisture,
+  }));
+};
+
+const queryBySensorId = async (sensorId, rangeClause, limit = 50) => {
+  const safeLimit = toPositiveInt(limit, 50, 1000);
+  const query = `
+from(bucket: "${influxBucket}")
+  ${rangeClause}
+  |> filter(fn: (r) => r["_measurement"] == "sensor_readings" and r["sensor_id"] == "${sensorId}")
+  |> pivot(rowKey:["_time", "farm_id"], columnKey:["_field"], valueColumn:"_value")
+  |> sort(columns: ["_time"], desc: true)
+  |> limit(n: ${safeLimit})
+`;
+  const rows = await runFluxQuery(query);
+  return rows.map((row) => ({
+    timestamp: row._time,
+    farm_id: row.farm_id,
+    temperature: row.temperature,
+    humidity: row.humidity,
+    soil_moisture: row.soil_moisture,
   }));
 };
 
@@ -254,6 +275,7 @@ module.exports = {
   queryExtremes,
   queryHistory,
   queryAllFieldsHistory,
+  queryBySensorId,
   buildRange,
   toPositiveInt,
   setIO,

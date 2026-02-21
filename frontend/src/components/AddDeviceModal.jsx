@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import Modal from './Modal';
-import { Cpu, MapPin, Hash, Trees as Farm, Loader } from 'lucide-react';
+import { Cpu, MapPin, Hash, Trees as Farm, Loader, Droplets } from 'lucide-react';
 
 const AddDeviceModal = ({ isOpen, onClose, onDeviceAdded, deviceToEdit = null }) => {
   const [formData, setFormData] = useState({
     device_name: '',
     model: '',
     location: '',
-    farmId: ''
+    farmId: '',
+    moisture_threshold: 30
   });
   const [farms, setFarms] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -22,10 +23,11 @@ const AddDeviceModal = ({ isOpen, onClose, onDeviceAdded, deviceToEdit = null })
             device_name: deviceToEdit.device_name || '',
             model: deviceToEdit.model || '',
             location: deviceToEdit.location || '',
-            farmId: deviceToEdit.Farms && deviceToEdit.Farms.length > 0 ? deviceToEdit.Farms[0].id : ''
+            farmId: deviceToEdit.Farms && deviceToEdit.Farms.length > 0 ? deviceToEdit.Farms[0].id : '',
+            moisture_threshold: deviceToEdit.moisture_threshold !== undefined ? deviceToEdit.moisture_threshold : 30
         });
       } else {
-        setFormData({ device_name: '', model: '', location: '', farmId: '' });
+        setFormData({ device_name: '', model: '', location: '', farmId: '', moisture_threshold: 30 });
       }
     }
   }, [isOpen, deviceToEdit]);
@@ -115,6 +117,19 @@ const AddDeviceModal = ({ isOpen, onClose, onDeviceAdded, deviceToEdit = null })
               <option key={farm.id} value={farm.id}>{farm.name}</option>
             ))}
           </select>
+        </div>
+        <div className="input-field-nm">
+          <Droplets size={18} />
+          <input
+            type="number"
+            name="moisture_threshold"
+            placeholder="Moisture Threshold (%)"
+            value={formData.moisture_threshold}
+            onChange={handleChange}
+            min="0"
+            max="100"
+            required
+          />
         </div>
 
         {error && <p className="form-error">{error}</p>}

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Cpu, MapPin, Search, RefreshCw, Plus, Trash2, Trees as Farm, Edit } from 'lucide-react';
+import { Cpu, MapPin, Search, RefreshCw, Plus, Trash2, Trees as Farm, Edit, Droplets } from 'lucide-react';
 import AddDeviceModal from './AddDeviceModal';
 import DeviceGraphModal from './DeviceGraphModal';
 import './DeviceList.css';
@@ -141,6 +141,10 @@ const DeviceList = ({ selectedFarm }) => {
                      <span>{device.Farms.map(f => f.name).join(', ')}</span>
                    </div>
                 )}
+                <div className="device-info-row">
+                  <Droplets size={14} />
+                  <span>Threshold: {device.moisture_threshold}%</span>
+                </div>
               </div>
               <button className="edit-btn-nm" onClick={(e) => handleEdit(e, device)}>
                 <Edit size={16} />

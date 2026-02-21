@@ -48,7 +48,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"farm_id\": \"farm-01\",\n  \"sensor_id\": \"sensor-1\",\n  \"temperature\": 25.5,\n  \"humidity\": 60.2,\n  \"soil_moisture\": 45.3,\n  \"timestamp\": \"2025-02-18T10:30:00Z\"\n}"
+              "raw": "{\n  \"farm_id\": \"farm-01\",\n  \"sensor_id\": \"fc9dd0ac-558c-460b-ab78-28efacc0256c\",\n  \"temperature\": 25.5,\n  \"humidity\": 60.2,\n  \"soil_moisture\": 45.3,\n  \"timestamp\": \"2025-02-18T10:30:00Z\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/sensor/ingest",
@@ -103,6 +103,29 @@
               ]
             },
             "description": "Get pivoted historical sensor data for a specific farm."
+          }
+        },
+        {
+          "name": "Get Sensor History (by sensor ID)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/sensor/fc9dd0ac-558c-460b-ab78-28efacc0256c/history?limit=50&period=-24h",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sensor", "fc9dd0ac-558c-460b-ab78-28efacc0256c", "history"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50"
+                },
+                {
+                  "key": "period",
+                  "value": "-24h"
+                }
+              ]
+            },
+            "description": "Get historical data for a specific sensor ID (e.g. ESP32)."
           }
         }
       ]
@@ -241,6 +264,28 @@
               "path": ["api", "irrigation"]
             },
             "description": "Record a new irrigation event. Timestamp is optional."
+          }
+        },
+        {
+          "name": "Start Irrigation (Remote Toggle)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"duration\": 60\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/devices/fc9dd0ac-558c-460b-ab78-28efacc0256c/start-irrigation",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "devices", "fc9dd0ac-558c-460b-ab78-28efacc0256c", "start-irrigation"]
+            },
+            "description": "Trigger the ESP32 relay remotely for a specific duration (in seconds)."
           }
         },
         {

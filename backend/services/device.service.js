@@ -134,8 +134,43 @@ const getIrrigationData = async (deviceId, duration = '7d') => {
   }
 };
 
+const startIrrigation = async (deviceId, duration) => {
+  try {
+    const device = await Device.findByPk(deviceId);
+    if (!device) {
+      throw new Error('Device not found');
+    }
+
+    logger.info(`Queuing irrigation command for device ${deviceId} for ${duration} seconds`);
+
+    // Queue command for polling device
+    const { DeviceCommand } = require('../models');
+    await DeviceCommand.create({
+      device_id: deviceId,
+      command: 'START_IRRIGATION',
+      payload: { duration: parseInt(duration) },
+      status: 'PENDING'
+    });
+
+    // Update Irrigation Status Summary in Postgres (as requested)
+    const { DeviceIrrigationStatus } = require('../models');
+    await DeviceIrrigationStatus.upsert({
+      device_id: deviceId,
+      last_irrigated_at: new Date(),
+      last_duration_seconds: parseInt(duration),
+      updated_at: new Date()
+    });
+
+    return { status: 'success', message: 'Irrigation command queued for device', deviceId, duration };
+  } catch (err) {
+    logger.error(`Failed to queue irrigation for device ${deviceId}`, { error: err.message });
+    throw err;
+  }
+};
+
 module.exports = {
   ingestReading,
   getReadings,
-  getIrrigationData
+  getIrrigationData,
+  startIrrigation
 };

@@ -19,6 +19,10 @@ const Device = sequelize.define('Device', {
     type: DataTypes.STRING(150),
     allowNull: true
   },
+  moisture_threshold: {
+    type: DataTypes.INTEGER,
+    defaultValue: 30
+  },
   created_at: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW
