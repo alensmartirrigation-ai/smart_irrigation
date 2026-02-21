@@ -63,8 +63,8 @@ try:
                     state["is_irrigating"] = False
                     state["remaining_duration"] = 0
             else:
-                # 10% chance to start irrigation
-                if random.random() < 0.1:
+                # 20% chance to start irrigation
+                if random.random() < 0.2:
                     state["is_irrigating"] = True
                     state["remaining_duration"] = random.randint(30, 120) # 30s to 2m
 
