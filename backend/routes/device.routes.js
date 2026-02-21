@@ -8,5 +8,6 @@ router.get('/devices/:id', deviceController.getDeviceById);
 router.put('/devices/:id', deviceController.updateDevice);
 router.delete('/devices/:id', deviceController.deleteDevice);
 router.get('/devices/:id/readings', deviceController.getDeviceReadings);
+router.get('/devices/:id/irrigation', deviceController.getDeviceIrrigation);
 
 module.exports = router;

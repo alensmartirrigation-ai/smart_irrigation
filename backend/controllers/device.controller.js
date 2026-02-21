@@ -123,6 +123,19 @@ const getDeviceReadings = async (req, res, next) => {
   }
 };
 
+const getDeviceIrrigation = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { duration } = req.query;
+
+    const irrigationData = await deviceService.getIrrigationData(id, duration);
+    res.status(200).json({ status: 'success', data: irrigationData });
+  } catch (error) {
+    logger.error(`Failed to get irrigation data for device ${req.params.id}`, { error: error.message });
+    next(error);
+  }
+};
+
 const deleteDevice = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -145,7 +158,7 @@ module.exports = {
   getAllDevices,
   getDeviceById,
   updateDevice,
-  updateDevice,
   deleteDevice,
-  getDeviceReadings
+  getDeviceReadings,
+  getDeviceIrrigation
 };
