@@ -194,7 +194,7 @@ const DeviceList = ({ selectedFarm }) => {
                     {new Date(device.DeviceIrrigationStatus.last_irrigated_at).getTime() + (device.DeviceIrrigationStatus.last_duration_seconds * 1000) > Date.now() ? (
                       <span className="pulsing-droplet">Irrigating...</span>
                     ) : (
-                      <span>Last: {new Date(device.DeviceIrrigationStatus.last_irrigated_at).toLocaleTimeString()}</span>
+                      <span>Last: {new Date(device.DeviceIrrigationStatus.last_irrigated_at).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata' })}</span>
                     )}
                   </div>
                 )}

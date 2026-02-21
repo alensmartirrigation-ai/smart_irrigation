@@ -119,7 +119,7 @@ const AdminOnboarding = () => {
                             </tr>
                             <tr>
                                 <td style={{color: '#94a3b8'}}>Connected Since</td>
-                                <td>{new Date(adminInfo.whatsapp.connectedAt).toLocaleString()}</td>
+                                <td>{new Date(adminInfo.whatsapp.connectedAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</td>
                             </tr>
                         </tbody>
                     </table>
@@ -183,7 +183,7 @@ const AdminOnboarding = () => {
                                 <tr key={user.id}>
                                     <td>{user.name}</td>
                                     <td>{user.phone}</td>
-                                    <td>{new Date(user.createdAt).toLocaleDateString()}</td>
+                                    <td>{new Date(user.createdAt).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}</td>
                                 </tr>
                             ))}
                         </tbody>

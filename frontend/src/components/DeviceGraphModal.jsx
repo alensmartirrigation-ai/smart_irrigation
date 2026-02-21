@@ -83,7 +83,7 @@ const DeviceGraphModal = ({ isOpen, onClose, device }) => {
       
       const formattedData = response.data.data.map(item => ({
         ...item,
-        timeDisplay: new Date(item.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        timeDisplay: new Date(item.time).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' }),
         irrigationLineValue: item.is_irrigating ? 0 : null
       }));
       

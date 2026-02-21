@@ -185,6 +185,15 @@ const stopIrrigation = async (deviceId) => {
       status: 'PENDING'
     });
 
+    // Update Irrigation Status Summary in Postgres to reflect stop
+    const { DeviceIrrigationStatus } = require('../models');
+    await DeviceIrrigationStatus.upsert({
+      device_id: deviceId,
+      last_irrigated_at: new Date(),
+      last_duration_seconds: 0,
+      updated_at: new Date()
+    });
+
     return { status: 'success', message: 'Stop irrigation command queued for device', deviceId };
   } catch (err) {
     logger.error(`Failed to queue stop irrigation for device ${deviceId}`, { error: err.message });
