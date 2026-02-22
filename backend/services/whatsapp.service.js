@@ -1,5 +1,4 @@
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, delay } = require('@whiskeysockets/baileys');
-const { Boom } = require('@hapi/boom');
 const qrcode = require('qrcode');
 const path = require('path');
 const fs = require('fs');
@@ -226,82 +225,69 @@ class SessionManager {
   }
 
   async handleMessages(farmId, upsert) {
-      // ... existing message handling logic
-      const { messages, type } = upsert;
-      if (type === 'notify') {
-        for (const msg of messages) {
-          if (!msg.key.fromMe && msg.message) {
-            const remoteJid = msg.key.remoteJid;
-            const textContent = msg.message.conversation || msg.message.extendedTextMessage?.text;
-            
-            if (textContent) {
-              // Simple command detection for pump control
-              const lower = textContent.toLowerCase();
-              if (lower.includes('turn on pump')) {
-                // Attempt to find a device for this farm and start irrigation
-                const { Device } = require('../models');
-                try {
-                  const device = await Device.findOne({ where: { farm_id: farmId } });
-                  if (device) {
-                    await this.startIrrigationForDevice(device.id);
-                    await this.sendMessage(farmId, remoteJid, '✅ Pump turned on for device ' + device.id);
-                    continue; // skip AI processing for this message
-                  }
-                } catch (e) {
-                  logger.error('Failed to start pump via WhatsApp command', { error: e.message });
-                  await this.sendMessage(farmId, remoteJid, '⚠️ Failed to turn on pump.');
-                  continue;
-                }
-              }
-              // Existing AI handling
-              try {
-                const reply = await aiService.generateResponse(textContent, [], { conversationId: `${farmId}:${remoteJid}`, farmId: farmId });
-                await this.sendMessage(farmId, remoteJid, reply);
-              } catch (error) {
-                logger.error('Failed to send AI auto-reply', { farmId, error: error.message });
-              }
-              logger.info(`📩 Received from ${remoteJid} for farm ${farmId}: ${textContent}`);
+    const { messages, type } = upsert;
+    if (type !== 'notify') return;
+
+    for (const msg of messages) {
+      if (msg.key.fromMe || !msg.message) continue;
+
+      const remoteJid = msg.key.remoteJid;
+      const textContent = msg.message.conversation || msg.message.extendedTextMessage?.text;
+      
+      if (!textContent) continue;
+
+      logger.info(`📩 Received from ${remoteJid} for farm ${farmId}: ${textContent}`);
+
+      // Improved command detection for pump control
+      const lower = textContent.toLowerCase();
+      if (lower.includes('turn on pump')) {
+        const { Device } = require('../models');
+        try {
+          // Extract UUID if present
+          const uuidRegex = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+          const match = textContent.match(uuidRegex);
+          const providedDeviceId = match ? match[0] : null;
+
+          const devices = await Device.findAll({ where: { farm_id: farmId } });
+
+          if (providedDeviceId) {
+            const device = devices.find(d => d.id === providedDeviceId);
+            if (device) {
+              await this.startIrrigationForDevice(device.id);
+              await this.sendMessage(farmId, remoteJid, `✅ Pump turned on for device: ${device.name || device.id}`);
+            } else {
+              await this.sendMessage(farmId, remoteJid, `⚠️ Device ${providedDeviceId} not found or doesn't belong to this farm.`);
             }
-            // Duplicate pump command handling removed
-            const lower = textContent.toLowerCase();
-            if (lower.includes('turn on pump')) {
-              // Attempt to find a device for this farm and start irrigation
-              const { Device } = require('../models');
-              try {
-                const device = await Device.findOne({ where: { farm_id: farmId } });
-                if (device) {
-                  await this.startIrrigationForDevice(device.id);
-                  await this.sendMessage(farmId, remoteJid, '✅ Pump turned on for device ' + device.id);
-                  continue; // skip AI processing for this message
-                }
-              } catch (e) {
-                logger.error('Failed to start pump via WhatsApp command', { error: e.message });
-                await this.sendMessage(farmId, remoteJid, '⚠️ Failed to turn on pump.');
-                continue;
-              }
-            }
-            // Existing AI handling
-            try {
-              const reply = await aiService.generateResponse(textContent, [], { conversationId: `${farmId}:${remoteJid}`, farmId: farmId });
-              await this.sendMessage(farmId, remoteJid, reply);
-            } catch (error) {
-              logger.error('Failed to send AI auto-reply', { farmId, error: error.message });
+          } else {
+            if (devices.length === 0) {
+              await this.sendMessage(farmId, remoteJid, '⚠️ No devices found for this farm.');
+            } else if (devices.length === 1) {
+              await this.startIrrigationForDevice(devices[0].id);
+              await this.sendMessage(farmId, remoteJid, `✅ Pump turned on for device: ${devices[0].name || devices[0].id}`);
+            } else {
+              const deviceList = devices.map(d => `- ${d.name || 'Unnamed'}: ${d.id}`).join('\n');
+              await this.sendMessage(farmId, remoteJid, `Multiple devices found. Please reply with "turn on pump [ID]":\n${deviceList}`);
             }
           }
-              logger.info(`📩 Received from ${remoteJid} for farm ${farmId}: ${textContent}`);
-              try {
-                const reply = await aiService.generateResponse(textContent, [], {
-                  conversationId: `${farmId}:${remoteJid}`,
-                  farmId: farmId
-                });
-                await this.sendMessage(farmId, remoteJid, reply);
-              } catch (error) {
-                logger.error('Failed to send AI auto-reply', { farmId, error: error.message });
-              }
-            }
-          }
+          continue; // skip AI processing for this message
+        } catch (e) {
+          logger.error('Failed to handle pump WhatsApp command', { error: e.message });
+          await this.sendMessage(farmId, remoteJid, '⚠️ Failed to process pump command.');
+          continue;
         }
       }
+
+      // AI handling
+      try {
+        const reply = await aiService.generateResponse(textContent, [], { 
+          conversationId: `${farmId}:${remoteJid}`, 
+          farmId: farmId 
+        });
+        await this.sendMessage(farmId, remoteJid, reply);
+      } catch (error) {
+        logger.error('Failed to send AI auto-reply', { farmId, error: error.message });
+      }
+    }
   }
 
   async destroySession(farmId, clearDB = false) {
