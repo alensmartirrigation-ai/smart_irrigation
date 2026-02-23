@@ -46,8 +46,12 @@ const Farm = sequelize.define('Farm', {
 
 // Associations defined in index or initialization
 Farm.associate = (models) => {
-  Farm.hasMany(models.User, { foreignKey: 'farm_id' });
-  Farm.belongsToMany(models.Device, { through: models.FarmDevice, foreignKey: 'farm_id' });
+  Farm.hasMany(models.User, { foreignKey: 'farm_id', onDelete: 'CASCADE' });
+  Farm.belongsToMany(models.Device, { 
+    through: models.FarmDevice, 
+    foreignKey: 'farm_id', 
+    onDelete: 'CASCADE' 
+  });
 };
 
 module.exports = Farm;
