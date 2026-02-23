@@ -10,7 +10,7 @@ const AddUserModal = ({ isOpen, onClose, onUserAdded }) => {
     phone: '+91 ',
     role: 'user',
     password: '',
-    farmIds: []
+    farmId: ''
   });
   const [farms, setFarms] = useState([]);
   const [showPassword, setShowPassword] = useState(false);
@@ -38,7 +38,6 @@ const AddUserModal = ({ isOpen, onClose, onUserAdded }) => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     if (name === 'phone') {
-      // Enforce +91 prefix
       if (!value.startsWith('+91 ')) {
         return;
       }
@@ -46,21 +45,10 @@ const AddUserModal = ({ isOpen, onClose, onUserAdded }) => {
     setFormData({ ...formData, [name]: value });
   };
 
-  const handleFarmToggle = (farmId) => {
-    setFormData(prev => {
-      const currentIds = prev.farmIds;
-      if (currentIds.includes(farmId)) {
-        return { ...prev, farmIds: currentIds.filter(id => id !== farmId) };
-      } else {
-        return { ...prev, farmIds: [...currentIds, farmId] };
-      }
-    });
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (formData.farmIds.length === 0) {
-      setError('Please select at least one farm');
+    if (!formData.farmId) {
+      setError('Please select a farm');
       return;
     }
     setLoading(true);
@@ -72,7 +60,7 @@ const AddUserModal = ({ isOpen, onClose, onUserAdded }) => {
       });
       onUserAdded();
       onClose();
-      setFormData({ name: '', username: '', phone: '+91 ', role: 'user', password: '', farmIds: [] });
+      setFormData({ name: '', username: '', phone: '+91 ', role: 'user', password: '', farmId: '' });
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to add user');
     } finally {
@@ -151,29 +139,14 @@ const AddUserModal = ({ isOpen, onClose, onUserAdded }) => {
           </select>
         </div>
 
-        <div className="farm-select-section">
-          <div className="farm-select-header">
-            <MapPin size={18} />
-            <span>Assign Farms <span style={{ color: 'var(--nm-danger, #e74c3c)' }}>*</span></span>
-          </div>
-          <div className="farm-checkbox-list">
-            {farms.length === 0 ? (
-              <p style={{ color: 'var(--nm-text-light)', fontSize: '0.85rem', padding: '8px 0' }}>
-                No farms available. Please create a farm first.
-              </p>
-            ) : (
-              farms.map(farm => (
-                <label key={farm.id} className={`farm-checkbox-item ${formData.farmIds.includes(farm.id) ? 'selected' : ''}`}>
-                  <input
-                    type="checkbox"
-                    checked={formData.farmIds.includes(farm.id)}
-                    onChange={() => handleFarmToggle(farm.id)}
-                  />
-                  <span className="farm-checkbox-name">{farm.name}</span>
-                </label>
-              ))
-            )}
-          </div>
+        <div className="input-field-nm">
+          <MapPin size={18} />
+          <select name="farmId" value={formData.farmId} onChange={handleChange} required>
+            <option value="" disabled>Select Farm *</option>
+            {farms.map(farm => (
+              <option key={farm.id} value={farm.id}>{farm.name}</option>
+            ))}
+          </select>
         </div>
 
         {error && <p className="form-error">{error}</p>}

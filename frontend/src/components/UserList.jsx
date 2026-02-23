@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { User, Phone, Shield, Search, RefreshCw, Plus, Trash2, Link2, X } from 'lucide-react';
+import { User, Phone, Shield, Search, RefreshCw, Plus, Trash2, MapPin } from 'lucide-react';
 import AddUserModal from './AddUserModal';
 import './UserList.css';
 
 const UserList = () => {
   const [users, setUsers] = useState([]);
-  const [farms, setFarms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -17,20 +16,7 @@ const UserList = () => {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     setIsAdmin(user.role === 'admin');
     fetchUsers();
-    fetchFarms();
   }, []);
-
-  const fetchFarms = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get('/api/farms', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setFarms(response.data);
-    } catch (err) {
-      console.error('Error fetching farms:', err);
-    }
-  };
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -61,36 +47,6 @@ const UserList = () => {
       alert(err.response?.data?.error || 'Failed to delete user');
     }
   };
-
-  const handleLinkFarm = async (userId, farmId) => {
-    if (!farmId) return;
-    try {
-      const token = localStorage.getItem('token');
-      await axios.post(`/api/users/${userId}/farms`, { farmId }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      fetchUsers();
-    } catch (err) {
-      alert(err.response?.data?.error || 'Failed to link farm');
-    }
-  };
-
-  const handleUnlinkFarm = async (userId, farmId) => {
-    if (!window.confirm('Are you sure you want to unlink this farm?')) return;
-    try {
-      const token = localStorage.getItem('token');
-      await axios.delete(`/api/users/${userId}/farms/${farmId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      fetchUsers();
-    } catch (err) {
-      alert(err.response?.data?.error || 'Failed to unlink farm');
-    }
-  };
-
-  useEffect(() => {
-    fetchUsers();
-  }, []);
 
   const filteredUsers = users.filter(user => 
     user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -160,42 +116,18 @@ const UserList = () => {
                 
                 <div className="user-farms-section">
                   <div className="section-header">
-                    <Link2 size={14} />
-                    <span>Associated Farms</span>
+                    <MapPin size={14} />
+                    <span>Farm</span>
                   </div>
                   <div className="farm-tags">
-                    {user.Farms && user.Farms.length > 0 ? (
-                      user.Farms.map(farm => (
-                        <div key={farm.id} className="farm-tag">
-                          <span>{farm.name}</span>
-                          {isAdmin && (
-                            <button onClick={() => handleUnlinkFarm(user.id, farm.id)} className="unlink-btn">
-                              <X size={10} />
-                            </button>
-                          )}
-                        </div>
-                      ))
+                    {user.Farm ? (
+                      <div className="farm-tag">
+                        <span>{user.Farm.name}</span>
+                      </div>
                     ) : (
-                      <p className="no-farms">No farms attached</p>
+                      <p className="no-farms">No farm assigned</p>
                     )}
                   </div>
-                  
-                  {isAdmin && (
-                    <div className="attach-farm-control">
-                      <select 
-                        onChange={(e) => handleLinkFarm(user.id, e.target.value)}
-                        value=""
-                      >
-                        <option value="" disabled>Attach to Farm...</option>
-                        {farms
-                          .filter(f => !user.Farms?.find(uf => uf.id === f.id))
-                          .map(farm => (
-                            <option key={farm.id} value={farm.id}>{farm.name}</option>
-                          ))
-                        }
-                      </select>
-                    </div>
-                  )}
                 </div>
               </div>
               {isAdmin && (

@@ -16,11 +16,11 @@ router.get('/users', async (req, res) => {
 
 router.post('/users', async (req, res) => {
   try {
-    const { name, username, phone, role, password, farmIds } = req.body;
+    const { name, username, phone, role, password, farmId } = req.body;
     
-    const newUser = await userService.addUser(name, username, phone, role, password, farmIds);
+    const newUser = await userService.addUser(name, username, phone, role, password, farmId);
     
-    logger.info('User added', { name, username, phone, role });
+    logger.info('User added', { name, username, phone, role, farmId });
     res.status(201).json({ 
       message: 'User added successfully', 
       user: newUser 
@@ -37,27 +37,6 @@ router.delete('/users/:id', authenticateToken, authorizeAdmin, async (req, res) 
     res.json({ message: 'User deleted successfully' });
   } catch (error) {
     logger.error('Failed to delete user', { error: error.message });
-    res.status(400).json({ error: error.message });
-  }
-});
-
-router.post('/users/:id/farms', authenticateToken, authorizeAdmin, async (req, res) => {
-  try {
-    const { farmId } = req.body;
-    await userService.linkFarm(req.params.id, farmId);
-    res.json({ message: 'Farm linked successfully' });
-  } catch (error) {
-    logger.error('Failed to link farm', { error: error.message });
-    res.status(400).json({ error: error.message });
-  }
-});
-
-router.delete('/users/:id/farms/:farmId', authenticateToken, authorizeAdmin, async (req, res) => {
-  try {
-    await userService.unlinkFarm(req.params.id, req.params.farmId);
-    res.json({ message: 'Farm unlinked successfully' });
-  } catch (error) {
-    logger.error('Failed to unlink farm', { error: error.message });
     res.status(400).json({ error: error.message });
   }
 });

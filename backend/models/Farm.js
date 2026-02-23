@@ -46,7 +46,7 @@ const Farm = sequelize.define('Farm', {
 
 // Associations defined in index or initialization
 Farm.associate = (models) => {
-  Farm.belongsToMany(models.User, { through: models.UserFarm });
+  Farm.hasMany(models.User, { foreignKey: 'farm_id' });
   Farm.belongsToMany(models.Device, { through: models.FarmDevice, foreignKey: 'farm_id' });
 };
 

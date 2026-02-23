@@ -32,7 +32,8 @@ const authenticateToken = async (req, res, next) => {
           { phone: username }
         ]
       },
-      attributes: { exclude: ['password'] }
+      attributes: { exclude: ['password'] },
+      include: [{ model: require('../models').Farm }]
     });
 
     if (!user) {

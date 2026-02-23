@@ -27,15 +27,22 @@ const User = sequelize.define('User', {
   phone: {
     type: DataTypes.STRING,
     unique: true
+  },
+  farm_id: {
+    type: DataTypes.UUID,
+    allowNull: false,
+    references: {
+      model: 'farms',
+      key: 'id'
+    }
   }
 }, {
   timestamps: true,
   tableName: 'users'
 });
 
-// Associations defined in index or initialization
 User.associate = (models) => {
-  User.belongsToMany(models.Farm, { through: models.UserFarm });
+  User.belongsTo(models.Farm, { foreignKey: 'farm_id' });
 };
 
 module.exports = User;
