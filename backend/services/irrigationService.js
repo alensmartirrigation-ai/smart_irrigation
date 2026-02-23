@@ -27,7 +27,10 @@ const recordIrrigation = async (farmId, durationMinutes, timestamp, deviceId) =>
   }
 
   if (timestamp) {
-    point.timestamp(timestamp);
+    const d = new Date(timestamp);
+    if (!isNaN(d.getTime())) {
+      point.timestamp(d.getTime());
+    }
   }
 
   influxWriteApi.writePoint(point);
@@ -120,7 +123,7 @@ const recordIrrigationStop = async (deviceId, farmId, timestampSec) => {
   const durationMin = Math.max(durationSec / 60, 0.1); // min 0.1 minutes if immediately toggled
   
   // Persist the full historical record into InfluxDB using existing function
-  await recordIrrigation(farmId, durationMin, stopDate.toISOString(), deviceId);
+  await recordIrrigation(farmId, durationMin, stopDate, deviceId);
   
   // Update SQL status table
   await DeviceIrrigationStatus.upsert({

@@ -50,6 +50,7 @@ const char* password = "jebin7037";
 const char* apiUrl         = "http://ec2-3-108-190-207.ap-south-1.compute.amazonaws.com:4000/api/sensor/ingest";
 const char* apiStartLogUrl = "http://ec2-3-108-190-207.ap-south-1.compute.amazonaws.com:4000/api/irrigation/log/start";
 const char* apiStopLogUrl  = "http://ec2-3-108-190-207.ap-south-1.compute.amazonaws.com:4000/api/irrigation/log/stop";
+const char* apiRecordUrl   = "http://ec2-3-108-190-207.ap-south-1.compute.amazonaws.com:4000/api/irrigation";
 
 const char* farmId   = "bd17c7be-9f95-4a56-ad35-a698d37d3513";  // test farm
 const char* deviceId = "b517b2a6-442e-46aa-873a-7adc0eb3840a";  // Chilly device
@@ -60,6 +61,7 @@ const char* deviceId = "b517b2a6-442e-46aa-873a-7adc0eb3840a";  // Chilly device
 const unsigned long SEND_INTERVAL        = 10000;  // Data push every 10 s
 const unsigned long WIFI_RETRY_INTERVAL  = 30000;  // WiFi reconnect attempt every 30 s
 const int           WIFI_CONNECT_TIMEOUT = 40;     // Max connection attempts at boot
+const unsigned long DEFAULT_IRRIGATION_DURATION = 20000; // 20 seconds default
 
 // ──────────────────────────────────────────────
 // NTP & Queue Configuration
@@ -69,9 +71,13 @@ const long  gmtOffset_sec      = 19800;  // India Time (IST) +5:30
 const int   daylightOffset_sec = 0;
 
 #define QUEUE_SIZE 10
+
+enum EventType { EVENT_START, EVENT_STOP, EVENT_RECORD };
+
 struct IrrigationEvent {
-    bool   isStart;
-    time_t timestamp;
+    EventType type;
+    time_t    timestamp;
+    float     duration_minutes;
 };
 IrrigationEvent eventQueue[QUEUE_SIZE];
 int queueHead  = 0;
@@ -92,6 +98,8 @@ DHT dht(DHTPIN, DHTTYPE);
 unsigned long lastSendTime         = 0;
 unsigned long lastWifiRetryTime    = 0;
 unsigned long manualIrrigationEnd  = 0;  // millis() when manual irrigation stops
+unsigned long pumpStartTime        = 0;  // millis() when pump started
+unsigned long cooldownEndTime      = 0;  // millis() when next auto-irrigation can start
 
 bool lastPumpState = false;
 
@@ -216,23 +224,25 @@ bool ensureWiFi() {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // Irrigation Event Queue
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-void enqueueIrrigationEvent(bool isStart) {
+void enqueueIrrigationEvent(EventType type, float duration = 0.0) {
     time_t now;
     time(&now);
     if (queueCount < QUEUE_SIZE) {
-        eventQueue[queueTail].isStart   = isStart;
+        eventQueue[queueTail].type      = type;
         eventQueue[queueTail].timestamp = now;
+        eventQueue[queueTail].duration_minutes = duration;
         queueTail = (queueTail + 1) % QUEUE_SIZE;
         queueCount++;
     } else {
         Serial.println("Queue full! Overwriting oldest event.");
-        eventQueue[queueHead].isStart   = isStart;
+        eventQueue[queueHead].type      = type;
         eventQueue[queueHead].timestamp = now;
+        eventQueue[queueHead].duration_minutes = duration;
         queueHead = (queueHead + 1) % QUEUE_SIZE;
         queueTail = (queueTail + 1) % QUEUE_SIZE;
     }
-    Serial.printf("Enqueued %s event. Queue size: %d\n",
-                  isStart ? "START" : "STOP", queueCount);
+    const char* typeStr = (type == EVENT_START) ? "START" : (type == EVENT_STOP ? "STOP" : "RECORD");
+    Serial.printf("Enqueued %s event. Queue size: %d\n", typeStr, queueCount);
 }
 
 /**
@@ -250,7 +260,10 @@ void processEventQueue() {
     }
 
     IrrigationEvent event = eventQueue[queueHead];
-    const char* url = event.isStart ? apiStartLogUrl : apiStopLogUrl;
+    const char* url;
+    if (event.type == EVENT_START) url = apiStartLogUrl;
+    else if (event.type == EVENT_STOP) url = apiStopLogUrl;
+    else url = apiRecordUrl;
 
     HTTPClient http;
     http.begin(url);
@@ -258,9 +271,17 @@ void processEventQueue() {
     http.setTimeout(10000);
 
     StaticJsonDocument<256> doc;
-    doc["device_id"] = deviceId;
-    doc["farm_id"]   = farmId;
-    doc["timestamp"] = event.timestamp;
+    if (event.type == EVENT_RECORD) {
+        doc["farm_id"] = farmId;
+        doc["duration_minutes"] = event.duration_minutes;
+        // Backend also accepts ISO string for record, but schema says z.datetime().optional()
+        // We'll skip timestamp for RECORD as backend defaults it to now if not provided,
+        // or we could format it if necessary.
+    } else {
+        doc["device_id"] = deviceId;
+        doc["farm_id"]   = farmId;
+        doc["timestamp"] = event.timestamp;
+    }
 
     String payload;
     serializeJson(doc, payload);
@@ -293,9 +314,7 @@ void processEventQueue() {
 
     http.end();
 
-    // Update the state machine AFTER processing so that if this is the
-    // recovery POST the "network restored" SMS fires before any subsequent
-    // irrigation SMS would be sent in normal mode.
+    // Update the state machine AFTER processing
     updateNetworkState(success);
 }
 
@@ -391,8 +410,23 @@ void processCommand(JsonObject cmd) {
 void handlePumpStateChange(bool pumpOn) {
     Serial.printf("Pump state changed: %s\n", pumpOn ? "ON" : "OFF");
 
-    // Always queue the event — it will be retried until the backend accepts it.
-    enqueueIrrigationEvent(pumpOn);
+    if (pumpOn) {
+        pumpStartTime = millis();
+        enqueueIrrigationEvent(EVENT_START);
+    } else {
+        unsigned long durationMs = millis() - pumpStartTime;
+        float durationMin = (float)durationMs / 60000.0;
+        
+        enqueueIrrigationEvent(EVENT_STOP);
+        // Also send full record
+        enqueueIrrigationEvent(EVENT_RECORD, durationMin);
+        
+        // Set 20s cooldown before next auto-irrigation can start
+        cooldownEndTime = millis() + 20000;
+        Serial.println("Irrigation finished. Cooldown active for 20s.");
+        
+        pumpStartTime = 0;
+    }
 
     if (networkDown) {
         // Fallback: inform operator via SMS while backend is unreachable.
@@ -402,8 +436,6 @@ void handlePumpStateChange(bool pumpOn) {
             sendSMS("[Chilly] FALLBACK: Irrigation stopped (backend unreachable).");
         }
     }
-    // If networkDown == false: no SMS. The POST will be attempted in
-    // processEventQueue(); success/failure is handled by updateNetworkState().
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -442,16 +474,17 @@ void loop() {
     bool shouldBeOn = false;
 
     // Auto: turn on when soil moisture is too low
-    if (soilPercent < 25) {
-        shouldBeOn = true;
-        Serial.println("Auto-Irrigation: Soil moisture low.");
+    if (soilPercent < 25 && !lastPumpState && millis() > manualIrrigationEnd && millis() > cooldownEndTime) {
+        // Trigger a default 20s cycle if not already running and not in cooldown
+        manualIrrigationEnd = millis() + DEFAULT_IRRIGATION_DURATION;
+        Serial.println("Auto-Irrigation: Soil moisture low. Triggering 20s cycle.");
     }
 
-    // Manual override from cloud command
+    // Irrigation is active if we are within a manual (or auto-triggered) period
     if (millis() < manualIrrigationEnd) {
         shouldBeOn = true;
         unsigned long remaining = (manualIrrigationEnd - millis()) / 1000;
-        Serial.printf("Manual-Irrigation active: %lu s remaining.\n", remaining);
+        Serial.printf("Irrigation active: %lu s remaining.\n", remaining);
     }
 
     // Apply relay
