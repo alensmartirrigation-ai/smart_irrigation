@@ -16,11 +16,11 @@ router.get('/users', async (req, res) => {
 
 router.post('/users', async (req, res) => {
   try {
-    const { name, username, phone, role, password } = req.body;
+    const { name, username, phone, role, password, farmIds } = req.body;
     
-    const newUser = await userService.addUser(name, username, phone, role, password);
+    const newUser = await userService.addUser(name, username, phone, role, password, farmIds);
     
-    logger.info('User added', { name, username, phone, role, password });
+    logger.info('User added', { name, username, phone, role });
     res.status(201).json({ 
       message: 'User added successfully', 
       user: newUser 

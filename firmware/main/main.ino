@@ -1,7 +1,7 @@
 /**
  * Smart Irrigation System - ESP32 Firmware
  * 
- * Version: 1.2 - Added SMS Notifications via SIM800L
+ * Version: 1.3 - Added periodic SMS status updates & pump state notifications
  */
 
 #include <DHT.h>
@@ -43,6 +43,10 @@ unsigned long manualIrrigationEndTime = 0; // Timestamp when manual irrigation s
 bool wifiWasDown = false;
 bool lastPumpState = false;
 
+// ---- Periodic SMS Status Timer ----
+unsigned long lastStatusSmsTime = 0;
+const unsigned long statusSmsInterval = 300000;  // 5 minutes in ms
+
 // ---- GSM Functions ----
 void initGSM() {
   sim800.begin(9600, SERIAL_8N1, SIM800_TX, SIM800_RX);
@@ -82,6 +86,24 @@ void sendSMS(const char* message) {
     Serial.write(c);
   }
   Serial.println("\nSMS sent.");
+}
+
+/**
+ * Sends a periodic status SMS with current sensor readings and pump state.
+ */
+void sendStatusSMS(float temp, float hum, int soil, bool pumpOn) {
+  char msg[200];
+  snprintf(msg, sizeof(msg),
+    "STATUS UPDATE:\n"
+    "Temp: %.1f C\n"
+    "Humidity: %.1f%%\n"
+    "Soil Moisture: %d%%\n"
+    "Pump: %s",
+    isnan(temp) ? 0.0f : temp,
+    isnan(hum) ? 0.0f : hum,
+    soil,
+    pumpOn ? "ON" : "OFF");
+  sendSMS(msg);
 }
 
 void setup() {
@@ -173,6 +195,14 @@ void sendSensorAndPollCommands(float temp, float hum, int soil) {
       wifiWasDown = true;
       sendSMS("ALERT: Smart Irrigation - WiFi is down. Unable to send sensor data to server.");
       Serial.println("SMS: WiFi down notification sent.");
+      lastStatusSmsTime = millis();  // Reset timer on first disconnect
+    }
+
+    // Periodic status SMS every 5 minutes while offline
+    if (millis() - lastStatusSmsTime >= statusSmsInterval) {
+      lastStatusSmsTime = millis();
+      sendStatusSMS(temp, hum, soil, digitalRead(RELAY_PIN) == HIGH);
+      Serial.println("SMS: Periodic status update sent (WiFi down).");
     }
     return;
   }
@@ -220,6 +250,14 @@ void sendSensorAndPollCommands(float temp, float hum, int soil) {
       wifiWasDown = true;
       sendSMS("ALERT: Smart Irrigation - Unable to reach server. API error occurred.");
       Serial.println("SMS: Server unreachable notification sent.");
+      lastStatusSmsTime = millis();
+    }
+
+    // Periodic status SMS every 5 minutes while server unreachable
+    if (millis() - lastStatusSmsTime >= statusSmsInterval) {
+      lastStatusSmsTime = millis();
+      sendStatusSMS(temp, hum, soil, digitalRead(RELAY_PIN) == HIGH);
+      Serial.println("SMS: Periodic status update sent (server unreachable).");
     }
   }
   http.end();

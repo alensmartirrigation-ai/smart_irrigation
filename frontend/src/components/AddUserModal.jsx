@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import Modal from './Modal';
-import { User, Phone, Shield, Lock, Loader, Eye, EyeOff } from 'lucide-react';
+import { User, Phone, Shield, Lock, Loader, Eye, EyeOff, MapPin } from 'lucide-react';
 
 const AddUserModal = ({ isOpen, onClose, onUserAdded }) => {
   const [formData, setFormData] = useState({
@@ -9,11 +9,31 @@ const AddUserModal = ({ isOpen, onClose, onUserAdded }) => {
     username: '',
     phone: '+91 ',
     role: 'user',
-    password: ''
+    password: '',
+    farmIds: []
   });
+  const [farms, setFarms] = useState([]);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchFarms();
+    }
+  }, [isOpen]);
+
+  const fetchFarms = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('/api/farms', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setFarms(response.data);
+    } catch (err) {
+      console.error('Error fetching farms:', err);
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -26,8 +46,23 @@ const AddUserModal = ({ isOpen, onClose, onUserAdded }) => {
     setFormData({ ...formData, [name]: value });
   };
 
+  const handleFarmToggle = (farmId) => {
+    setFormData(prev => {
+      const currentIds = prev.farmIds;
+      if (currentIds.includes(farmId)) {
+        return { ...prev, farmIds: currentIds.filter(id => id !== farmId) };
+      } else {
+        return { ...prev, farmIds: [...currentIds, farmId] };
+      }
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (formData.farmIds.length === 0) {
+      setError('Please select at least one farm');
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -37,7 +72,7 @@ const AddUserModal = ({ isOpen, onClose, onUserAdded }) => {
       });
       onUserAdded();
       onClose();
-      setFormData({ name: '', username: '', phone: '+91 ', role: 'user', password: '' });
+      setFormData({ name: '', username: '', phone: '+91 ', role: 'user', password: '', farmIds: [] });
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to add user');
     } finally {
@@ -114,6 +149,31 @@ const AddUserModal = ({ isOpen, onClose, onUserAdded }) => {
             <option value="user">User</option>
             <option value="admin">Admin</option>
           </select>
+        </div>
+
+        <div className="farm-select-section">
+          <div className="farm-select-header">
+            <MapPin size={18} />
+            <span>Assign Farms <span style={{ color: 'var(--nm-danger, #e74c3c)' }}>*</span></span>
+          </div>
+          <div className="farm-checkbox-list">
+            {farms.length === 0 ? (
+              <p style={{ color: 'var(--nm-text-light)', fontSize: '0.85rem', padding: '8px 0' }}>
+                No farms available. Please create a farm first.
+              </p>
+            ) : (
+              farms.map(farm => (
+                <label key={farm.id} className={`farm-checkbox-item ${formData.farmIds.includes(farm.id) ? 'selected' : ''}`}>
+                  <input
+                    type="checkbox"
+                    checked={formData.farmIds.includes(farm.id)}
+                    onChange={() => handleFarmToggle(farm.id)}
+                  />
+                  <span className="farm-checkbox-name">{farm.name}</span>
+                </label>
+              ))
+            )}
+          </div>
         </div>
 
         {error && <p className="form-error">{error}</p>}

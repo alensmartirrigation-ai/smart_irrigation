@@ -285,3 +285,63 @@
 .user-card {
   padding-bottom: 50px; /* Extra space for the delete button */
 }
+
+/* Farm Selection in AddUserModal */
+.farm-select-section {
+  margin-top: 4px;
+}
+
+.farm-select-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--nm-text);
+  margin-bottom: 10px;
+}
+
+.farm-checkbox-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 150px;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.farm-checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--nm-bg);
+  box-shadow: 3px 3px 6px var(--nm-shadow), -3px -3px 6px var(--nm-light);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 13px;
+  color: var(--nm-text);
+}
+
+.farm-checkbox-item:hover {
+  transform: translateY(-1px);
+}
+
+.farm-checkbox-item.selected {
+  box-shadow: inset 3px 3px 6px var(--nm-shadow), inset -3px -3px 6px var(--nm-light);
+  color: var(--nm-accent);
+  font-weight: 500;
+}
+
+.farm-checkbox-item input[type="checkbox"] {
+  accent-color: var(--nm-accent);
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.farm-checkbox-name {
+  flex: 1;
+}
+

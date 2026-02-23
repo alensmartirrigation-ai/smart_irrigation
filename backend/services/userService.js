@@ -88,10 +88,23 @@ exports.unlinkFarm = async (userId, farmId) => {
   }
 };
 
-exports.addUser = async (name, username, phone, role, password) => {
+exports.addUser = async (name, username, phone, role, password, farmIds) => {
+  const { Farm, UserFarm } = require('../models');
+  const whatsappService = require('./whatsapp.service');
   try {
     if (!name || !username || !phone || !password) {
       throw new Error('Name, Username, Phone and Password are required');
+    }
+
+    // Validate farmIds - at least 1 farm is mandatory
+    if (!farmIds || !Array.isArray(farmIds) || farmIds.length === 0) {
+      throw new Error('At least one farm must be selected');
+    }
+
+    // Verify all farm IDs exist
+    const farms = await Farm.findAll({ where: { id: farmIds } });
+    if (farms.length !== farmIds.length) {
+      throw new Error('One or more selected farms do not exist');
     }
 
     const existingUser = await User.findOne({ where: { username } });
@@ -116,10 +129,39 @@ exports.addUser = async (name, username, phone, role, password) => {
       password: hashedPassword
     });
 
-    const userResponse = newUser.toJSON();
-    delete userResponse.password;
+    // Link all selected farms to the user
+    for (const farm of farms) {
+      try {
+        await newUser.addFarm(farm);
+      } catch (magicErr) {
+        await UserFarm.create({ UserId: newUser.id, FarmId: farm.id });
+      }
+    }
 
-    return userResponse;
+    // Send WhatsApp intro message via each connected farm
+    for (const farm of farms) {
+      try {
+        const status = whatsappService.getStatus(farm.id);
+        if (status && status.status === 'connected') {
+          const introMessage = `👋 Welcome to Smart Irrigation, ${name}! You've been added to *${farm.name}*. You can now interact with our system via WhatsApp. Send 'help' to get started.`;
+          await whatsappService.sendMessage(farm.id, phone, introMessage);
+          logger.info('WhatsApp intro message sent to new user', { userId: newUser.id, farmId: farm.id, phone });
+        } else {
+          logger.info('WhatsApp not connected for farm, skipping intro message', { farmId: farm.id });
+        }
+      } catch (whatsappErr) {
+        logger.warn('Failed to send WhatsApp intro message', { farmId: farm.id, phone, error: whatsappErr.message });
+        // Don't fail user creation if WhatsApp message fails
+      }
+    }
+
+    // Reload user with farms for response
+    const fullUser = await User.findByPk(newUser.id, {
+      attributes: { exclude: ['password'] },
+      include: [{ model: Farm, through: { attributes: [] } }]
+    });
+
+    return fullUser.toJSON();
   } catch (error) {
     logger.error('Error adding user from service', { error: error.message });
     throw error;
