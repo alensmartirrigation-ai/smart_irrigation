@@ -87,21 +87,29 @@ const DeviceGraphModal = ({ isOpen, onClose, device }) => {
       return (
         <div className="custom-tooltip" style={{ 
           backgroundColor: 'var(--nm-bg)', 
-          padding: '10px', 
+          padding: '12px', 
           border: '1px solid var(--nm-shadow)',
-          borderRadius: '8px',
-          boxShadow: '4px 4px 8px var(--nm-shadow)'
+          borderRadius: '12px',
+          boxShadow: '6px 6px 12px var(--nm-shadow), -4px -4px 8px var(--nm-light)'
         }}>
-          <p className="label" style={{ fontWeight: 'bold', marginBottom: '5px' }}>{label}</p>
+          <p className="label" style={{ fontWeight: 'bold', marginBottom: '8px', borderBottom: '1px solid var(--nm-shadow)', paddingBottom: '4px' }}>{label}</p>
           {payload.map((entry, index) => {
             if (entry.dataKey === 'irrigationY') return null;
             return (
-              <p key={index} style={{ color: entry.color, margin: '2px 0', fontSize: '12px' }}>
-                {entry.name}: {entry.value}
-                {entry.name === 'Temperature' ? '°C' : '%'}
-              </p>
+              <div key={index} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '20px', margin: '4px 0' }}>
+                <span style={{ color: entry.color, fontSize: '12px', fontWeight: '500' }}>{entry.name}:</span>
+                <span style={{ fontSize: '12px', color: 'var(--nm-text)', fontWeight: 'bold' }}>
+                  {entry.value}
+                  {entry.name === 'Temperature' ? '°C' : entry.name === 'Duration' ? 's' : '%'}
+                </span>
+              </div>
             );
           })}
+          {pointData.is_irrigating === 1 && (
+            <div style={{ marginTop: '8px', paddingTop: '4px', borderTop: '1px solid var(--nm-shadow)', display: 'flex', alignItems: 'center', color: '#32d74b', fontSize: '12px', fontWeight: 'bold' }}>
+              <Zap size={14} style={{ marginRight: '5px' }} /> Irrigating
+            </div>
+          )}
         </div>
       );
     }
@@ -230,6 +238,7 @@ const DeviceGraphModal = ({ isOpen, onClose, device }) => {
               })}
 
               {visibleMetrics.moisture && <Bar yAxisId="right" dataKey="moisture" name="Moisture" fill="#8884d8" barSize={20} opacity={0.6} isAnimationActive={false} />}
+              {visibleMetrics.irrigation && <Bar yAxisId="right" dataKey="irrigation_duration" name="Duration" fill="#00d2ff" barSize={10} opacity={0.4} isAnimationActive={false} />}
               {visibleMetrics.temperature && <Line yAxisId="left" type="monotone" dataKey="temperature" name="Temperature" stroke="#ff7300" dot={false} strokeWidth={1.5} isAnimationActive={false} />}
               {visibleMetrics.humidity && <Line yAxisId="right" type="monotone" dataKey="humidity" name="Humidity" stroke="#387908" dot={false} strokeWidth={1.5} isAnimationActive={false} />}
             </ComposedChart>

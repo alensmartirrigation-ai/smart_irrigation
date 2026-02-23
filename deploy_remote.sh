@@ -13,7 +13,6 @@ echo "📂 Syncing files to $SERVER..."
 rsync -avz -e "ssh -i $KEY_FILE -o StrictHostKeyChecking=no" \
     --exclude "node_modules" \
     --exclude ".git" \
-    --exclude "frontend/dist" \
     --exclude "public/*" \
     --exclude "auth_info_baileys" \
     --exclude ".DS_Store" \
@@ -73,13 +72,6 @@ ssh -i $KEY_FILE -o StrictHostKeyChecking=no $USER@$SERVER << 'EOF'
     # 1. Database & Time-Series (Postgres & InfluxDB)
     echo "🐳 Starting Docker services..."
     sudo docker compose up -d
-
-    # 2. Frontend Build
-    echo "📦 Building Frontend..."
-    cd frontend
-    npm install
-    npm run build
-    cd ..
 
     # 3. Backend Setup
     echo "🔙 Setting up Backend..."
