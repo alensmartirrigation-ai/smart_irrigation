@@ -22,6 +22,8 @@ echo "🚀 Running remote deployment..."
 ssh -i $KEY_FILE -o StrictHostKeyChecking=no $USER@$SERVER << 'EOF'
     set -e
     cd ~/smart_irrigation
+    echo "📥 Fetching latest changes from git..."
+    git pull
 
     # ─── Prerequisites ───────────────────────────────────────────────
     echo "🔧 Checking prerequisites..."
