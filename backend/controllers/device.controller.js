@@ -142,6 +142,22 @@ const getDeviceIrrigation = async (req, res, next) => {
   }
 };
 
+const getDeviceIrrigationEvents = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { duration } = req.query;
+    
+    // Import directly from irrigationService
+    const irrigationService = require('../services/irrigationService');
+    const events = await irrigationService.getDeviceIrrigationEvents(id, duration || '7d');
+    
+    res.status(200).json({ status: 'success', data: events });
+  } catch (error) {
+    logger.error(`Failed to get irrigation events for device ${req.params.id}`, { error: error.message });
+    next(error);
+  }
+};
+
 const deleteDevice = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -217,6 +233,7 @@ module.exports = {
   deleteDevice,
   getDeviceReadings,
   getDeviceIrrigation,
+  getDeviceIrrigationEvents,
   startIrrigation,
   stopIrrigation,
   updateThreshold

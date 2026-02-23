@@ -9,6 +9,13 @@ const irrigationPayloadSchema = z.object({
     .optional(),
 });
 
+const irrigationLogPayloadSchema = z.object({
+  device_id: z.string().trim().min(1),
+  farm_id: z.string().trim().min(1),
+  timestamp: z.coerce.number(), // Unix timestamp (seconds)
+});
+
 module.exports = {
   irrigationPayloadSchema,
+  irrigationLogPayloadSchema,
 };

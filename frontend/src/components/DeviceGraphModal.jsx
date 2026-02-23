@@ -6,6 +6,7 @@ import { Loader, Zap } from 'lucide-react';
 
 const DeviceGraphModal = ({ isOpen, onClose, device }) => {
   const [data, setData] = useState([]);
+  const [irrigationEvents, setIrrigationEvents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [zoomLevel, setZoomLevel] = useState(1);
@@ -33,30 +34,6 @@ const DeviceGraphModal = ({ isOpen, onClose, device }) => {
     setVisibleMetrics(prev => ({ ...prev, [metric]: !prev[metric] }));
   };
 
-  const getIrrigationSpans = () => {
-    const spans = [];
-    let currentSpan = null;
-
-    displayedData.forEach((d, i) => {
-      if (d.is_irrigating) {
-        if (!currentSpan) {
-          currentSpan = { start: d.timeDisplay, startIndex: i };
-        }
-      } else {
-        if (currentSpan) {
-          currentSpan.end = d.timeDisplay;
-          spans.push(currentSpan);
-          currentSpan = null;
-        }
-      }
-    });
-    if (currentSpan) {
-      currentSpan.end = displayedData[displayedData.length - 1].timeDisplay;
-      spans.push(currentSpan);
-    }
-    return spans;
-  };
-
   const displayedData = data.slice(-Math.floor(data.length * zoomLevel));
 
   useEffect(() => {
@@ -77,19 +54,27 @@ const DeviceGraphModal = ({ isOpen, onClose, device }) => {
     setError(null);
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get(`/api/devices/${device.id}/readings?duration=${duration}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
       
-      const formattedData = response.data.data.map(item => ({
+      const [readingsRes, eventsRes] = await Promise.all([
+        axios.get(`/api/devices/${device.id}/readings?duration=${duration}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        }),
+        axios.get(`/api/devices/${device.id}/irrigation-events?duration=${duration}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+      ]);
+      
+      const formattedData = readingsRes.data.data.map(item => ({
         ...item,
         timeDisplay: new Date(item.time).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' }),
-        irrigationLineValue: item.is_irrigating ? 0 : null
+        // Keep the raw timestamp so we can use it to map ReferenceAreas
+        rawTimeMs: new Date(item.time).getTime()
       }));
       
       setData(formattedData);
+      setIrrigationEvents(eventsRes.data.data || []);
     } catch (err) {
-      console.error('Error fetching readings:', err);
+      console.error('Error fetching data:', err);
       if (data.length === 0) setError('Failed to load device data.');
     } finally {
       setLoading(false);
@@ -98,7 +83,7 @@ const DeviceGraphModal = ({ isOpen, onClose, device }) => {
 
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
-      const irrigationData = payload[0].payload;
+      const pointData = payload[0].payload;
       return (
         <div className="custom-tooltip" style={{ 
           backgroundColor: 'var(--nm-bg)', 
@@ -117,11 +102,6 @@ const DeviceGraphModal = ({ isOpen, onClose, device }) => {
               </p>
             );
           })}
-          {irrigationData.is_irrigating && (
-            <p style={{ color: '#32d74b', margin: '5px 0 0 0', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '5px', borderTop: '1px solid var(--nm-shadow)', paddingTop: '5px' }}>
-              Irrigating ({irrigationData.irrigation_duration}s left)
-            </p>
-          )}
         </div>
       );
     }
@@ -220,25 +200,36 @@ const DeviceGraphModal = ({ isOpen, onClose, device }) => {
             <ComposedChart data={displayedData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--nm-text-light)" opacity={0.2} />
               <XAxis dataKey="timeDisplay" stroke="var(--nm-text-light)" tick={{fontSize: 12}} />
+              <XAxis xAxisId="rawTime" dataKey="rawTimeMs" hide type="number" domain={['dataMin', 'dataMax']} />
               <YAxis yAxisId="left" stroke="var(--nm-text-light)" tick={{fontSize: 12}} label={{ value: 'Temp (°C)', angle: -90, position: 'insideLeft', style: { fill: 'var(--nm-text)' } }} />
               <YAxis yAxisId="right" orientation="right" stroke="var(--nm-text-light)" tick={{fontSize: 12}} label={{ value: 'Humidity / Moisture (%)', angle: 90, position: 'insideRight', style: { fill: 'var(--nm-text)' } }} />
-              <YAxis yAxisId="barAxis" hide domain={[-12.5, 157.5]} /> {/* Hidden axis to squash bars */}
               <Tooltip content={<CustomTooltip />} />
               <Legend />
-              {visibleMetrics.irrigation && (
-                <Line 
-                  yAxisId="barAxis" 
-                  type="stepAfter" 
-                  dataKey="irrigationLineValue" 
-                  name="Irrigation" 
-                  stroke="#32d74b" 
-                  strokeWidth={25} 
-                  strokeLinecap="round"
-                  dot={false} 
-                  isAnimationActive={false} 
-                />
-              )}
-              {visibleMetrics.moisture && <Bar yAxisId="barAxis" dataKey="moisture" name="Moisture" fill="#8884d8" barSize={20} opacity={0.6} isAnimationActive={false} />}
+              
+              {/* Irrigation background shaded zones */}
+              {visibleMetrics.irrigation && irrigationEvents.map((event, idx) => {
+                // Determine if this shaded area is within our current zoomed time region
+                const visibleStart = displayedData[0]?.rawTimeMs;
+                const visibleEnd = displayedData[displayedData.length - 1]?.rawTimeMs;
+                
+                if (event.end_time < visibleStart || event.start_time > visibleEnd) return null;
+
+                return (
+                  <ReferenceArea
+                    key={`irr-${idx}`}
+                    xAxisId="rawTime"
+                    yAxisId="right"
+                    x1={event.start_time}
+                    x2={event.end_time}
+                    fill="#32d74b"
+                    fillOpacity={0.15}
+                    strokeOpacity={0.5}
+                    stroke="#32d74b"
+                  />
+                )
+              })}
+
+              {visibleMetrics.moisture && <Bar yAxisId="right" dataKey="moisture" name="Moisture" fill="#8884d8" barSize={20} opacity={0.6} isAnimationActive={false} />}
               {visibleMetrics.temperature && <Line yAxisId="left" type="monotone" dataKey="temperature" name="Temperature" stroke="#ff7300" dot={false} strokeWidth={1.5} isAnimationActive={false} />}
               {visibleMetrics.humidity && <Line yAxisId="right" type="monotone" dataKey="humidity" name="Humidity" stroke="#387908" dot={false} strokeWidth={1.5} isAnimationActive={false} />}
             </ComposedChart>
