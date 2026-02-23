@@ -241,14 +241,18 @@ class SessionManager {
       // Improved command detection for pump control
       const lower = textContent.toLowerCase();
       if (lower.includes('turn on pump')) {
-        const { Device } = require('../models');
+        const { Device, Farm } = require('../models');
         try {
           // Extract UUID if present
           const uuidRegex = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
           const match = textContent.match(uuidRegex);
           const providedDeviceId = match ? match[0] : null;
 
-          const devices = await Device.findAll({ where: { farm_id: farmId } });
+          // Query devices through Farm association (many-to-many via FarmDevice)
+          const farm = await Farm.findByPk(farmId, {
+            include: [{ model: Device }]
+          });
+          const devices = farm ? farm.Devices : [];
 
           if (providedDeviceId) {
             const device = devices.find(d => d.id === providedDeviceId);

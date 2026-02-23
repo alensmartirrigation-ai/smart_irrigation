@@ -1,13 +1,14 @@
 /**
  * Smart Irrigation System - ESP32 Firmware
  * 
- * Version: 1.1 - Added Remote Relay Control support
+ * Version: 1.2 - Added SMS Notifications via SIM800L
  */
 
-#include "DHT.h"
+#include <DHT.h>
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
+#include <HardwareSerial.h>
 
 // ---- Hardware Configuration ----
 #define DHTPIN 4
@@ -15,12 +16,18 @@
 #define SOIL_PIN 34
 #define RELAY_PIN 23
 
+// ---- GSM (SIM800L) Configuration ----
+#define SIM800_TX 16  // ESP32 RX2 <- SIM800L TX
+#define SIM800_RX 17  // ESP32 TX2 -> SIM800L RX
+const char* phoneNumber = "+918129437037";
+HardwareSerial sim800(2);  // Use UART2
+
 // ---- WiFi Credentials ----
-const char* ssid = "FTTH";
-const char* password = "sini1125";
+const char* ssid = "V_RON1CA";
+const char* password = "jebin7037";
 
 // ---- API Configuration ----
-const char* apiUrl = "http://192.168.1.34:4000/api/sensor/ingest";
+const char* apiUrl = "http://192.168.2.1:4000/api/sensor/ingest";
 const char* farmId = "farm-01";
 const char* sensorId = "fc9dd0ac-558c-460b-ab78-28efacc0256c";
 
@@ -32,19 +39,76 @@ unsigned long lastSendTime = 0;
 const unsigned long sendInterval = 5000;
 unsigned long manualIrrigationEndTime = 0; // Timestamp when manual irrigation should stop
 
+// ---- SMS State Tracking (to avoid duplicate SMS) ----
+bool wifiWasDown = false;
+bool lastPumpState = false;
+
+// ---- GSM Functions ----
+void initGSM() {
+  sim800.begin(9600, SERIAL_8N1, SIM800_TX, SIM800_RX);
+  delay(3000);  // Wait for SIM800L to boot
+  Serial.println("Initializing GSM module...");
+
+  sim800.println("AT");
+  delay(1000);
+  while (sim800.available()) Serial.write(sim800.read());
+
+  sim800.println("AT+CMGF=1");  // Set SMS to text mode
+  delay(1000);
+  while (sim800.available()) Serial.write(sim800.read());
+
+  sim800.println("AT+CSCS=\"GSM\"");  // Set character set
+  delay(1000);
+  while (sim800.available()) Serial.write(sim800.read());
+
+  Serial.println("GSM module initialized.");
+}
+
+void sendSMS(const char* message) {
+  Serial.printf("Sending SMS to %s: %s\n", phoneNumber, message);
+
+  sim800.print("AT+CMGS=\"");
+  sim800.print(phoneNumber);
+  sim800.println("\"");
+  delay(1000);
+
+  sim800.print(message);
+  delay(100);
+  sim800.write(26);  // Ctrl+Z to send
+  delay(5000);       // Wait for SMS to be sent
+
+  while (sim800.available()) {
+    char c = sim800.read();
+    Serial.write(c);
+  }
+  Serial.println("\nSMS sent.");
+}
+
 void setup() {
   Serial.begin(115200);
   dht.begin();
   pinMode(RELAY_PIN, OUTPUT);
   digitalWrite(RELAY_PIN, LOW);
 
+  // Initialize GSM module
+  initGSM();
+
   WiFi.begin(ssid, password);
   Serial.print("Connecting to WiFi");
-  while (WiFi.status() != WL_CONNECTED) {
+  int wifiAttempts = 0;
+  while (WiFi.status() != WL_CONNECTED && wifiAttempts < 40) {
     delay(500);
     Serial.print(".");
+    wifiAttempts++;
   }
-  Serial.println("\nWiFi connected!");
+
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("\nWiFi connected!");
+  } else {
+    Serial.println("\nWiFi connection failed!");
+    wifiWasDown = true;
+    sendSMS("ALERT: Smart Irrigation - WiFi connection failed at startup. Unable to send sensor data to server.");
+  }
 }
 
 void loop() {
@@ -78,7 +142,19 @@ void loop() {
     digitalWrite(RELAY_PIN, LOW);
   }
 
-  // 3. Periodic Data Push & Command Poll
+  // 3. Pump State Change SMS
+  if (shouldBeOn != lastPumpState) {
+    if (shouldBeOn) {
+      sendSMS("Smart Irrigation - Pump Turned ON. Irrigation started.");
+      Serial.println("SMS: Pump ON notification sent.");
+    } else {
+      sendSMS("Smart Irrigation - Pump Turned OFF. Irrigation stopped.");
+      Serial.println("SMS: Pump OFF notification sent.");
+    }
+    lastPumpState = shouldBeOn;
+  }
+
+  // 4. Periodic Data Push & Command Poll
   if (millis() - lastSendTime >= sendInterval) {
     lastSendTime = millis();
     sendSensorAndPollCommands(temperature, humidity, soilPercent);
@@ -91,7 +167,21 @@ void loop() {
  * Sends sensor data and checks for pending commands in the response.
  */
 void sendSensorAndPollCommands(float temp, float hum, int soil) {
-  if (WiFi.status() != WL_CONNECTED) return;
+  // WiFi down detection & SMS alert
+  if (WiFi.status() != WL_CONNECTED) {
+    if (!wifiWasDown) {
+      wifiWasDown = true;
+      sendSMS("ALERT: Smart Irrigation - WiFi is down. Unable to send sensor data to server.");
+      Serial.println("SMS: WiFi down notification sent.");
+    }
+    return;
+  }
+
+  // WiFi recovered
+  if (wifiWasDown) {
+    wifiWasDown = false;
+    Serial.println("WiFi reconnected.");
+  }
 
   HTTPClient http;
   http.begin(apiUrl);
@@ -125,6 +215,12 @@ void sendSensorAndPollCommands(float temp, float hum, int soil) {
     }
   } else {
     Serial.printf("API Error [%d]\n", httpResponseCode);
+    // HTTP error (server unreachable) — also treated as connectivity issue
+    if (!wifiWasDown) {
+      wifiWasDown = true;
+      sendSMS("ALERT: Smart Irrigation - Unable to reach server. API error occurred.");
+      Serial.println("SMS: Server unreachable notification sent.");
+    }
   }
   http.end();
 }
