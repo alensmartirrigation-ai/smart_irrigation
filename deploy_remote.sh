@@ -12,7 +12,6 @@ REMOTE_PATH="~/smart_irrigation"
 echo "📂 Syncing files to $SERVER..."
 rsync -avz -e "ssh -i $KEY_FILE -o StrictHostKeyChecking=no" \
     --exclude "node_modules" \
-    --exclude ".git" \
     --exclude "public/*" \
     --exclude "auth_info_baileys" \
     --exclude ".DS_Store" \
@@ -22,11 +21,15 @@ echo "🚀 Running remote deployment..."
 ssh -i $KEY_FILE -o StrictHostKeyChecking=no $USER@$SERVER << 'EOF'
     set -e
     cd ~/smart_irrigation
-    echo "📥 Fetching latest changes from git..."
-    git pull
+    # Git
+    if ! command -v git &> /dev/null; then
+        echo "📦 Installing Git..."
+        sudo yum install -y git
+    fi
+    echo "  ✅ Git $(git --version)"
 
-    # ─── Prerequisites ───────────────────────────────────────────────
-    echo "🔧 Checking prerequisites..."
+    echo "� Fetching latest changes from git..."
+    git pull
 
     # Node.js 20+
     if ! command -v node &> /dev/null || [ "$(node -v | cut -d. -f1 | tr -d 'v')" -lt 20 ]; then

@@ -99,7 +99,12 @@ unsigned long lastSendTime         = 0;
 unsigned long lastWifiRetryTime    = 0;
 unsigned long manualIrrigationEnd  = 0;  // millis() when manual irrigation stops
 unsigned long pumpStartTime        = 0;  // millis() when pump started
-unsigned long cooldownEndTime      = 0;  // millis() when next auto-irrigation can start
+
+// ── Auto-Irrigation State Machine ───────────────
+enum IrrigationState { IDLE, IRRIGATING, COOLDOWN };
+IrrigationState currentAutoState = IDLE;
+unsigned long autoIrrigationEnd  = 0;
+unsigned long cooldownEndTime      = 0;
 
 bool lastPumpState = false;
 
@@ -421,10 +426,6 @@ void handlePumpStateChange(bool pumpOn) {
         // Also send full record
         enqueueIrrigationEvent(EVENT_RECORD, durationMin);
         
-        // Set 20s cooldown before next auto-irrigation can start
-        cooldownEndTime = millis() + 20000;
-        Serial.println("Irrigation finished. Cooldown active for 20s.");
-        
         pumpStartTime = 0;
     }
 
@@ -471,20 +472,45 @@ void loop() {
     int   soilPercent = constrain(map(soilRaw, 4095, 0, 0, 100), 0, 100);
 
     // ── 2. Irrigation Control Logic ──────────────
-    bool shouldBeOn = false;
+    bool autoShouldBeOn = false;
 
-    // Auto: turn on when soil moisture is too low
-    if (soilPercent < 25 && !lastPumpState && millis() > manualIrrigationEnd && millis() > cooldownEndTime) {
-        // Trigger a default 20s cycle if not already running and not in cooldown
-        manualIrrigationEnd = millis() + DEFAULT_IRRIGATION_DURATION;
-        Serial.println("Auto-Irrigation: Soil moisture low. Triggering 20s cycle.");
+    // --- Auto-Irrigation State Machine ---
+    switch (currentAutoState) {
+        case IDLE:
+            if (soilPercent < 25) {
+                currentAutoState = IRRIGATING;
+                autoIrrigationEnd = millis() + DEFAULT_IRRIGATION_DURATION;
+                Serial.println("Auto-Irrigation: Soil moisture low. Triggering 20s cycle.");
+            }
+            break;
+
+        case IRRIGATING:
+            autoShouldBeOn = true;
+            if (millis() >= autoIrrigationEnd) {
+                currentAutoState = COOLDOWN;
+                cooldownEndTime = millis() + 20000;
+                Serial.println("Auto-Irrigation: Cycle finished. Entering 20s cooldown.");
+            }
+            break;
+
+        case COOLDOWN:
+            autoShouldBeOn = false;
+            if (millis() >= cooldownEndTime) {
+                currentAutoState = IDLE;
+                Serial.println("Auto-Irrigation: Cooldown finished. Ready for next check.");
+            }
+            break;
     }
 
-    // Irrigation is active if we are within a manual (or auto-triggered) period
+    // Combine Auto and Manual (Cloud) control
+    bool shouldBeOn = autoShouldBeOn || (millis() < manualIrrigationEnd);
+
     if (millis() < manualIrrigationEnd) {
-        shouldBeOn = true;
         unsigned long remaining = (manualIrrigationEnd - millis()) / 1000;
-        Serial.printf("Irrigation active: %lu s remaining.\n", remaining);
+        Serial.printf("Manual-Irrigation active: %lu s remaining.\n", remaining);
+    } else if (autoShouldBeOn) {
+        unsigned long remaining = (autoIrrigationEnd - millis()) / 1000;
+        Serial.printf("Auto-Irrigation active: %lu s remaining.\n", remaining);
     }
 
     // Apply relay
