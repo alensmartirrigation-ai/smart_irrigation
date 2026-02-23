@@ -1,11 +1,20 @@
-const userService = require('../services/userService');
+// userService removed as per hardcoded login requirement
+// const userService = require('../services/userService');
 const logger = require('../utils/logger');
 
 exports.login = async (req, res) => {
   try {
     const { username, password } = req.body;
     
-    const user = await userService.authenticate(username, password);
+    // Hardcoded user authentication as requested
+    let user = null;
+    if (username === 'admin' && password === 'admin') {
+      user = { 
+        id: 'admin-id',
+        username: 'admin', 
+        role: 'admin' 
+      };
+    }
 
     if (!user) {
       logger.warn('Failed login attempt', { username });
