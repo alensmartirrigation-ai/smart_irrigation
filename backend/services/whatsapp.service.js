@@ -238,6 +238,32 @@ class SessionManager {
 
       logger.info(`📩 Received from ${remoteJid} for farm ${farmId}: ${textContent}`);
 
+      // --- AUTHENTICATION CHECK ---
+      const { User } = require('../models');
+      try {
+        const senderPhoneRaw = remoteJid.split('@')[0];
+        const cleanedSenderPhone = senderPhoneRaw.replace(/\D/g, '');
+        
+        const usersWithAccess = await User.findAll({ where: { farm_id: farmId } });
+        const hasAccess = usersWithAccess.some(user => {
+          if (!user.phone) return false;
+          const cleanedDbPhone = user.phone.replace(/\D/g, '');
+          // Match the last 10 digits as a reliable comparison across different country code formats (+91, 91, etc)
+          const dbLast10 = cleanedDbPhone.slice(-10);
+          const senderLast10 = cleanedSenderPhone.slice(-10);
+          return dbLast10 === senderLast10;
+        });
+
+        if (!hasAccess) {
+          logger.warn(`Unauthorized WhatsApp message from ${remoteJid} to farm ${farmId}`);
+          await this.sendMessage(farmId, remoteJid, "⚠️ Unauthorized: You do not have access to this farm. Please contact your administrator.");
+          continue;
+        }
+      } catch (authError) {
+        logger.error('WhatsApp auth check failed', { error: authError.message });
+        continue; // Safer to block if DB check fails
+      }
+
       // Improved command detection for pump control
       const lower = textContent.toLowerCase();
       if (lower.includes('turn on pump')) {
