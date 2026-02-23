@@ -255,8 +255,7 @@ class SessionManager {
         });
 
         if (!hasAccess) {
-          logger.warn(`Unauthorized WhatsApp message from ${remoteJid} to farm ${farmId}`);
-          await this.sendMessage(farmId, remoteJid, "⚠️ Unauthorized: You do not have access to this farm. Please contact your administrator.");
+          logger.warn(`Unauthorized WhatsApp message from ${remoteJid} to farm ${farmId} (Ignored)`);
           continue;
         }
       } catch (authError) {
