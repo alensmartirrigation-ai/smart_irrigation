@@ -1,5 +1,5 @@
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, delay } = require('@whiskeysockets/baileys');
-const qrcode = require('qrcode');
+const qrService = require('./qr.service');
 const path = require('path');
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
@@ -38,6 +38,8 @@ class SessionManager {
     this.sessions = new Map(); // Map<farmIdKey, SessionInstance>
     this.pendingInit = new Set(); // farmId keys currently being inited
     this.reconnectTimeouts = new Map(); // farmIdKey -> timeoutId (single scheduled reconnect per farm)
+    this._closePending = new Set(); // farmId keys with a close handler queued via setImmediate
+    this._socketIdCounter = 0; // monotonic counter to tag each socket so stale events are ignored
     this.io = null;
     this.baseAuthPath = path.join(process.cwd(), 'auth_info_baileys');
   }
@@ -165,15 +167,19 @@ class SessionManager {
         });
 
         // Store active session (key so GET ?farmId=X finds session whether X is string or number)
+        const socketId = ++this._socketIdCounter;
         this.sessions.set(key, {
             sock,
             status: 'connecting',
             qrCode: null,
-            createdAt: new Date()
+            createdAt: new Date(),
+            _socketId: socketId
         });
+        this._closePending.delete(key);
 
         sock.ev.on('creds.update', saveCreds);
-        sock.ev.on('connection.update', (update) => this.handleConnectionUpdate(farmId, update));
+        // Capture socketId so stale events from old sockets are ignored
+        sock.ev.on('connection.update', (update) => this.handleConnectionUpdate(farmId, update, socketId));
         sock.ev.on('messages.upsert', (upsert) => this.handleMessages(farmId, upsert));
 
     } catch (err) {
@@ -183,13 +189,15 @@ class SessionManager {
     }
   }
 
-  async handleConnectionUpdate(farmId, update) {
+  async handleConnectionUpdate(farmId, update, socketId) {
       const { connection, lastDisconnect, qr } = update;
       const key = this._key(farmId);
       const session = this.sessions.get(key);
-      logger.info(`connection.update for farm ${farmId}`, { connection: connection || undefined, hasQr: !!qr, hasLastDisconnect: !!lastDisconnect });
 
-      if (!session) return;
+      // Ignore events from stale sockets (old socket that was already destroyed/replaced)
+      if (!session || session._socketId !== socketId) return;
+
+      logger.info(`connection.update for farm ${farmId}`, { connection: connection || undefined, hasQr: !!qr, hasLastDisconnect: !!lastDisconnect });
 
       try {
           const farm = await Farm.findByPk(farmId);
@@ -198,14 +206,19 @@ class SessionManager {
           if (qr) {
               logger.info(`QR received for farm ${farmId} - emitting to clients`);
               session.status = 'qr_pending';
-              const qrCodeData = await qrcode.toDataURL(qr, { errorCorrectionLevel: 'H', margin: 2, scale: 10 });
-              session.qrCode = qrCodeData;
-              
-              await farm.update({ connection_status: 'qr_pending' });
-              
-              if (this.io) {
-                  this.io.emit('whatsapp_qr', { farmId: String(farmId), qr: qrCodeData });
-                  this.io.emit('whatsapp_status', { farmId: String(farmId), status: 'qr_pending' });
+              try {
+                  const qrPayload = typeof qr === 'string' ? qr : String(qr);
+                  const qrCodeData = await qrService.toDataURL(qrPayload);
+                  session.qrCode = qrCodeData;
+
+                  await farm.update({ connection_status: 'qr_pending' });
+
+                  if (this.io) {
+                      this.io.emit('whatsapp_qr', { farmId: String(farmId), qr: qrCodeData });
+                      this.io.emit('whatsapp_status', { farmId: String(farmId), status: 'qr_pending' });
+                  }
+              } catch (qrErr) {
+                  logger.error(`Failed to generate or emit QR for farm ${farmId}`, { error: qrErr.message });
               }
           }
 
@@ -229,13 +242,28 @@ class SessionManager {
           if (connection === 'close') {
               const reason = lastDisconnect?.error?.output?.statusCode;
               const isLoggedOut = reason === DisconnectReason.loggedOut;
+              // Treat any "session/auth invalid" or "need new pairing" as restore failed so we clear and show new QR
               const isRestoreFailed = isLoggedOut ||
                   reason === 405 ||
                   reason === 401 ||
                   reason === 408 ||
+                  reason === 403 ||  // forbidden
+                  reason === 411 ||  // multideviceMismatch
+                  reason === 428 ||  // connectionClosed
+                  reason === 440 ||  // connectionReplaced
+                  reason === 500 ||  // badSession
+                  reason === 515 ||  // restartRequired
                   reason === undefined;
 
+              // Set flag SYNCHRONOUSLY so getStatus() won't race to auto-init
+              this._closePending.add(key);
+
               const doClose = () => {
+                  this._closePending.delete(key);
+                  // Re-check: if a newer socket was already created, don't interfere
+                  const currentSession = this.sessions.get(key);
+                  if (currentSession && currentSession._socketId !== socketId) return;
+
                   if (isRestoreFailed) {
                       logger.info(`Farm ${farmId} session invalid (reason: ${reason}). Clearing and creating new session for QR.`);
                       this.destroySession(farmId, true).then(() => this.scheduleReconnect(farmId, 2000));
@@ -423,8 +451,10 @@ class SessionManager {
       const key = this._key(farmId);
       const session = this.sessions.get(key);
       if (!session) {
-          if (!this.pendingInit.has(key) && !this.reconnectTimeouts.has(key)) {
-              this.init(farmId).catch((err) => logger.error('Auto-init from getStatus failed', { farmId, error: err.message }));
+          // Only auto-init if no other init/reconnect/close is in progress for this farm
+          if (!this.pendingInit.has(key) && !this.reconnectTimeouts.has(key) && !this._closePending.has(key)) {
+              logger.info('WhatsApp getStatus: no session, triggering init', { farmId: String(farmId), key });
+              this.init(farmId).catch((err) => logger.error('Auto-init from getStatus failed', { farmId: String(farmId), error: err.message }));
           }
           return { status: 'disconnected', qr: null };
       }

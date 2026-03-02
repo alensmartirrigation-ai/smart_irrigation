@@ -4,6 +4,7 @@ import Home from './pages/Home';
 import AdminOnboarding from './pages/AdminOnboarding';
 import Login from './pages/Login';
 import Settings from './pages/Settings';
+import ConnectWhatsApp from './pages/ConnectWhatsApp';
 import { ProtectedRoute } from './utils/auth';
 import './App.css';
 
@@ -16,6 +17,11 @@ function App() {
           <Route path="/" element={
             <ProtectedRoute>
               <Home />
+            </ProtectedRoute>
+          } />
+          <Route path="/connect-whatsapp" element={
+            <ProtectedRoute>
+              <ConnectWhatsApp />
             </ProtectedRoute>
           } />
           <Route path="/admin/onboarding" element={

@@ -35,6 +35,8 @@ const Home = () => {
     { id: 'platform-settings', label: 'Platform Settings', icon: <Smartphone size={20} /> },
   ];
 
+  const handleConnectWhatsApp = () => navigate('/connect-whatsapp');
+
   return (
     <div className="dashboard-container">
       {/* Sidebar */}
@@ -57,6 +59,10 @@ const Home = () => {
               <span>{item.label}</span>
             </div>
           ))}
+          <div className="nav-item" onClick={handleConnectWhatsApp}>
+            <Smartphone size={20} />
+            <span>Connect WhatsApp</span>
+          </div>
         </nav>
 
         <div className="logout-section">

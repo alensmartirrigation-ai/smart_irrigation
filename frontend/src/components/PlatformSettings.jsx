@@ -108,6 +108,21 @@ const PlatformSettings = ({ selectedFarm }) => {
     }
   };
 
+  const handleForceNewQr = async () => {
+    if (!selectedFarm) return;
+    if (!window.confirm('Generate a new QR code? The current WhatsApp link will be disconnected and you’ll need to scan the new code to link again.')) return;
+    setLoading(true);
+    setQrCode(null);
+    try {
+      await axios.post('/api/whatsapp/logout', { farmId: selectedFarm.id });
+      setStatus('connecting');
+      // Backend will init and emit new QR via socket; polling will also pick it up
+    } catch (err) {
+      console.error('Failed to force new QR:', err);
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="platform-settings-container">
       <div className="settings-card">
@@ -156,15 +171,27 @@ const PlatformSettings = ({ selectedFarm }) => {
 
         <div className="settings-actions">
           {status === 'connected' ? (
-            <button className="action-btn-nm logout" onClick={handleLogout}>
-              <LogOut size={18} />
-              <span>Disconnect WhatsApp</span>
-            </button>
+            <>
+              <button className="action-btn-nm logout" onClick={handleLogout}>
+                <LogOut size={18} />
+                <span>Disconnect WhatsApp</span>
+              </button>
+              <button className="action-btn-nm secondary" onClick={handleForceNewQr} disabled={loading}>
+                <QrCode size={18} />
+                <span>Force new QR</span>
+              </button>
+            </>
           ) : (
-            <button className="action-btn-nm" onClick={handleReconnect} disabled={loading}>
-              <RefreshCw size={18} className={loading ? 'spinning' : ''} />
-              <span>Retry Connection</span>
-            </button>
+            <>
+              <button className="action-btn-nm" onClick={handleReconnect} disabled={loading}>
+                <RefreshCw size={18} className={loading ? 'spinning' : ''} />
+                <span>Retry Connection</span>
+              </button>
+              <button className="action-btn-nm secondary" onClick={handleForceNewQr} disabled={loading}>
+                <QrCode size={18} />
+                <span>Force new QR</span>
+              </button>
+            </>
           )}
           <button className="action-btn-nm secondary">
             <Shield size={18} />

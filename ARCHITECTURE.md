@@ -92,6 +92,28 @@ flowchart LR
   - device polls `/api/sensor/ingest`
   - backend returns pending commands in ingest response and marks them `SENT`
 
+### 4.7 QR Code Functionality
+
+QR code generation and delivery is centralized so it can support multiple use cases (WhatsApp linking, device pairing, share links).
+
+- **Shared service**: `backend/services/qr.service.js`
+  - `toDataURL(payload, options)` → returns a data URL string for use in `<img src="...">` or UI.
+  - `toBuffer(payload, options)` → returns a PNG `Buffer` for streaming or storage.
+  - All callers use the same error-correction and scaling defaults unless overridden.
+
+- **Current use case: WhatsApp session linking**
+  - Baileys emits a raw QR string; `whatsapp.service` calls `qrService.toDataURL(qr)` and stores the result in the in-memory session.
+  - Status and QR are exposed via:
+    - **REST**: `GET /api/whatsapp/status?farmId=<id>` → `{ status, qr }` (qr is data URL or null).
+    - **Socket.IO**: `whatsapp_qr` (payload: `{ farmId, qr }`), `whatsapp_status` (payload: `{ farmId, status }`).
+  - Farm model stores `connection_status` (`disconnected` | `connecting` | `qr_pending` | `connected`).
+
+- **Adding a new QR use case (e.g. device pairing)**
+  1. In the backend: generate the pairing payload (e.g. JSON with deviceId, farmId, token, expiry).
+  2. Call `qrService.toDataURL(payload)` (or `toBuffer` if serving as file/stream).
+  3. Expose via a dedicated route (e.g. `GET /api/devices/:id/pairing-qr`) and/or emit via Socket.IO under a distinct event (e.g. `device_pairing_qr`).
+  4. In the frontend: reuse the same pattern as WhatsApp — poll or subscribe to the event, then render `<img src={qrDataUrl} alt="..." />` inside a dedicated component or modal.
+
 ## 5. Frontend Architecture
 - Framework: React 19 + React Router + Axios + Socket.IO client.
 - Entrypoints: `frontend/src/main.jsx`, `frontend/src/App.jsx`.
@@ -102,9 +124,10 @@ flowchart LR
   - `AdminOnboarding`
 - Core modules:
   - `FarmSelector` subscribes to `farm_updated` socket events.
-  - `PlatformSettings` subscribes to WhatsApp status/QR socket events.
+  - `PlatformSettings` subscribes to WhatsApp status/QR socket events and displays QR via `<img src={qrCode} />` (data URL from backend).
   - `DeviceList` handles irrigation actions and device telemetry modal.
   - `UserList`/`FarmList` provide management CRUD flows.
+- **QR display pattern**: For any QR use case, the frontend can poll a status endpoint and/or subscribe to a Socket.IO event; the backend supplies a data URL (`data:image/png;base64,...`), which is set as `src` on an `<img>`. Optional fallback: show a placeholder or loading state until the first QR payload arrives.
 - Auth model: browser `localStorage` token + client-side route guard (`ProtectedRoute`).
 
 ## 6. Firmware Architecture (ESP32)
