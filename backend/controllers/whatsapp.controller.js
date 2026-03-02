@@ -6,7 +6,17 @@ const getStatus = (req, res) => {
   if (!farmId) {
       return res.status(400).json({ error: 'Missing farmId query parameter' });
   }
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
   res.status(200).json(whatsappService.getStatus(farmId));
+};
+
+const getDebugStatus = (req, res) => {
+  const { farmId } = req.query;
+  if (!farmId) {
+      return res.status(400).json({ error: 'Missing farmId query parameter' });
+  }
+  res.set('Cache-Control', 'no-store');
+  res.status(200).json(whatsappService.getDebugStatus(farmId));
 };
 
 const sendMessage = async (req, res, next) => {
@@ -53,6 +63,7 @@ const reconnect = async (req, res, next) => {
 
 module.exports = {
   getStatus,
+  getDebugStatus,
   sendMessage,
   logout,
   reconnect

@@ -15,7 +15,8 @@ const FarmSelector = ({ selectedFarm, onSelectFarm }) => {
   useEffect(() => {
     fetchFarms();
 
-    const socket = io();
+    const socketUrl = import.meta.env.DEV ? 'http://localhost:4000' : '';
+    const socket = io(socketUrl);
     socket.on('farm_updated', (updatedFarm) => {
         setFarms(prevFarms => prevFarms.map(farm => 
             farm.id === updatedFarm.id ? { ...farm, ...updatedFarm } : farm

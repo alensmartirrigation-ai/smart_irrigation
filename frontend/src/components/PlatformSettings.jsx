@@ -13,14 +13,19 @@ const PlatformSettings = ({ selectedFarm }) => {
   useEffect(() => {
     if (!selectedFarm) return;
 
-    const socket = io();
     const farmId = selectedFarm.id;
+    const socketUrl = import.meta.env.DEV ? 'http://localhost:4000' : '';
+    const socket = io(socketUrl, { path: '/socket.io', transports: ['websocket', 'polling'] });
+    socket.on('connect', () => console.log('[WhatsApp] Socket connected to backend'));
+    socket.on('connect_error', (err) => console.warn('[WhatsApp] Socket error', err?.message));
 
     const fetchStatus = async () => {
       try {
-        const response = await axios.get(`/api/whatsapp/status?farmId=${farmId}`);
+        const response = await axios.get(`/api/whatsapp/status?farmId=${farmId}&_t=${Date.now()}`, { headers: { 'Cache-Control': 'no-cache' } });
         setStatus(response.data.status);
-        setQrCode(response.data.qr ?? null);
+        const qr = response.data.qr ?? null;
+        if (qr) console.log('[WhatsApp] QR received (poll)', { farmId, status: response.data.status });
+        setQrCode((prev) => (response.data.status === 'connected' ? null : (qr ?? prev)));
         setLoading(false);
         if (response.data.status === 'connected' && pollRef.current) {
           clearInterval(pollRef.current);
@@ -51,11 +56,12 @@ const PlatformSettings = ({ selectedFarm }) => {
 
     socket.on('whatsapp_qr', (data) => {
       if (String(data.farmId) !== String(farmId)) return;
+      if (data.qr) console.log('[WhatsApp] QR received (socket)', { farmId });
       setQrCode(data.qr);
       setLoading(false);
     });
 
-    pollRef.current = setInterval(fetchStatus, 3000);
+    pollRef.current = setInterval(fetchStatus, 1500);
 
     return () => {
       if (pollRef.current) {

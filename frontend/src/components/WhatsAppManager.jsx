@@ -12,7 +12,8 @@ const WhatsAppManager = () => {
   const [messageStatus, setMessageStatus] = useState({ type: '', text: '' });
 
   useEffect(() => {
-    const socket = io();
+    const socketUrl = import.meta.env.DEV ? 'http://localhost:4000' : '';
+    const socket = io(socketUrl);
 
     socket.on('whatsapp_status', (newStatus) => {
       setStatus(newStatus);

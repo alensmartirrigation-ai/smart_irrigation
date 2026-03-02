@@ -7,10 +7,8 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': 'http://localhost:4000',
-      '/socket.io': {
-        target: 'ws://localhost:4000',
-        ws: true,
-      },
+      // Socket.IO: in dev the app connects directly to the backend (see io(socketUrl) in components).
+      // No /socket.io proxy to avoid ws proxy EPIPE/ECONNRESET when the backend closes connections.
     }
   }
 })
