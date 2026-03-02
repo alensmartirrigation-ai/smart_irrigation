@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { io } from 'socket.io-client';
 import { Smartphone, QrCode, Shield, RefreshCw, CheckCircle, LogOut } from 'lucide-react';
@@ -8,53 +8,63 @@ const PlatformSettings = ({ selectedFarm }) => {
   const [status, setStatus] = useState('initializing');
   const [qrCode, setQrCode] = useState(null);
   const [loading, setLoading] = useState(true);
+  const pollRef = useRef(null);
 
   useEffect(() => {
     if (!selectedFarm) return;
 
     const socket = io();
-    
-    // Initial fetch for the specific farm
+    const farmId = selectedFarm.id;
+
     const fetchStatus = async () => {
-      setLoading(true);
       try {
-        const response = await axios.get(`/api/whatsapp/status?farmId=${selectedFarm.id}`);
+        const response = await axios.get(`/api/whatsapp/status?farmId=${farmId}`);
         setStatus(response.data.status);
-        setQrCode(response.data.qr);
+        setQrCode(response.data.qr ?? null);
+        setLoading(false);
+        if (response.data.status === 'connected' && pollRef.current) {
+          clearInterval(pollRef.current);
+          pollRef.current = null;
+        }
       } catch (err) {
         console.error('Failed to fetch WhatsApp status:', err);
         setStatus('disconnected');
-      } finally {
         setLoading(false);
       }
     };
 
+    setLoading(true);
     fetchStatus();
 
     socket.on('whatsapp_status', (data) => {
-      // Check if the event is for the current farm
-      if (data.farmId === selectedFarm.id) {
-          setStatus(data.status);
-          if (data.status === 'connected') setQrCode(null);
+      if (String(data.farmId) !== String(farmId)) return;
+      setStatus(data.status);
+      if (data.status === 'connected') {
+        setQrCode(null);
+        setLoading(false);
+        if (pollRef.current) {
+          clearInterval(pollRef.current);
+          pollRef.current = null;
+        }
       }
     });
 
     socket.on('whatsapp_qr', (data) => {
-      if (data.farmId === selectedFarm.id) {
-          setQrCode(data.qr);
-          setLoading(false);
-      }
+      if (String(data.farmId) !== String(farmId)) return;
+      setQrCode(data.qr);
+      setLoading(false);
     });
 
+    pollRef.current = setInterval(fetchStatus, 3000);
+
     return () => {
+      if (pollRef.current) {
+        clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
       socket.disconnect();
     };
-  }, [selectedFarm]); // Re-run when selectedFarm changes
-
-  // We don't need a separate useEffect for selectedFarm.connection_status anymore
-  // because we fetch the source-of-truth status from the WhatsApp service directly 
-  // when the farm changes. However, initially displayed status from the prop 
-  // is faster, so we can initialize state with it if we want, but the fetch is safer.
+  }, [selectedFarm]);
 
   const handleLogout = async () => {
     if (!window.confirm('Are you sure you want to logout from WhatsApp?')) return;
@@ -73,21 +83,22 @@ const PlatformSettings = ({ selectedFarm }) => {
   const getStatusText = () => {
     switch (status) {
       case 'connected': return 'Connected';
+      case 'qr_pending':
       case 'scanning': return 'QR Ready';
       case 'disconnected': return 'Disconnected';
+      case 'connecting': return 'Connecting...';
       default: return 'Initializing...';
     }
   };
 
   const handleReconnect = async () => {
+    if (!selectedFarm) return;
     setLoading(true);
     try {
       await axios.post('/api/whatsapp/reconnect', { farmId: selectedFarm.id });
-      // The socket event should update status to 'initializing'/'connecting' shortly
     } catch (err) {
       console.error('Failed to reconnect:', err);
-      // Fallback reload if API fails? Or just show error?
-      // window.location.reload(); 
+      setLoading(false);
     }
   };
 

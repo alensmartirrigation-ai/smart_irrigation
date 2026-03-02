@@ -35,13 +35,33 @@ console.warn = function (...args) {
 
 class SessionManager {
   constructor() {
-    this.sessions = new Map(); // Map<farmId, SessionInstance>
+    this.sessions = new Map(); // Map<farmIdKey, SessionInstance>
+    this.pendingInit = new Set(); // farmId keys currently being inited
+    this.reconnectTimeouts = new Map(); // farmIdKey -> timeoutId (single scheduled reconnect per farm)
     this.io = null;
     this.baseAuthPath = path.join(process.cwd(), 'auth_info_baileys');
   }
 
+  _key(farmId) {
+    return farmId == null ? null : String(farmId);
+  }
+
   setIO(io) {
     this.io = io;
+  }
+
+  scheduleReconnect(farmId, delayMs) {
+    const key = this._key(farmId);
+    const existing = this.reconnectTimeouts.get(key);
+    if (existing) {
+      clearTimeout(existing);
+      this.reconnectTimeouts.delete(key);
+    }
+    const timeoutId = setTimeout(() => {
+      this.reconnectTimeouts.delete(key);
+      this.init(farmId);
+    }, delayMs);
+    this.reconnectTimeouts.set(key, timeoutId);
   }
 
   async initAll() {
@@ -61,6 +81,10 @@ class SessionManager {
         return;
     }
 
+    const key = this._key(farmId);
+    if (this.pendingInit.has(key)) return;
+    this.pendingInit.add(key);
+
     try {
         // Step 1: Fetch farm from DB
         const farm = await Farm.findByPk(farmId);
@@ -69,8 +93,8 @@ class SessionManager {
             return;
         }
 
-        const sessionExistsInMemory = this.sessions.has(farmId);
-        const session = sessionExistsInMemory ? this.sessions.get(farmId) : null;
+        const sessionExistsInMemory = this.sessions.has(key);
+        const session = sessionExistsInMemory ? this.sessions.get(key) : null;
 
         // Step 2: If in-memory session exists and is connected, return
         if (session && session.status === 'connected') {
@@ -79,11 +103,11 @@ class SessionManager {
         
         // If socket exists but closed/broken, destroy it first to be safe
         if (session) {
-            this.sessions.delete(farmId);
+            this.sessions.delete(key);
         }
 
         // Step 3: Validate DB <-> File Consistency
-        const authPath = path.join(this.baseAuthPath, farmId);
+        const authPath = path.join(this.baseAuthPath, key);
         const authExists = fs.existsSync(authPath);
         const hasSessionId = !!farm.session_id;
 
@@ -131,8 +155,8 @@ class SessionManager {
             // Implement other Baileys configs if needed
         });
 
-        // Store active session
-        this.sessions.set(farmId, {
+        // Store active session (key so GET ?farmId=X finds session whether X is string or number)
+        this.sessions.set(key, {
             sock,
             status: 'connecting',
             qrCode: null,
@@ -145,13 +169,14 @@ class SessionManager {
 
     } catch (err) {
         logger.error(`Failed to init session for farm ${farmId}`, { error: err.message });
-        // Attempt to reset DB status to clean state?
+    } finally {
+        this.pendingInit.delete(key);
     }
   }
 
   async handleConnectionUpdate(farmId, update) {
       const { connection, lastDisconnect, qr } = update;
-      const session = this.sessions.get(farmId);
+      const session = this.sessions.get(this._key(farmId));
       if (!session) return;
 
       try {
@@ -165,8 +190,8 @@ class SessionManager {
               await farm.update({ connection_status: 'qr_pending' });
               
               if (this.io) {
-                  this.io.emit('whatsapp_qr', { farmId, qr: qrCodeData });
-                  this.io.emit('whatsapp_status', { farmId, status: 'qr_pending' });
+                  this.io.emit('whatsapp_qr', { farmId: String(farmId), qr: qrCodeData });
+                  this.io.emit('whatsapp_status', { farmId: String(farmId), status: 'qr_pending' });
               }
           }
 
@@ -180,8 +205,8 @@ class SessionManager {
               });
 
               if (this.io) {
-                  this.io.emit('whatsapp_status', { farmId, status: 'connected' });
-                  this.io.emit('whatsapp_qr', { farmId, qr: null });
+                  this.io.emit('whatsapp_status', { farmId: String(farmId), status: 'connected' });
+                  this.io.emit('whatsapp_qr', { farmId: String(farmId), qr: null });
                   this.io.emit('farm_updated', farm.toJSON());
               }
               logger.info(`WhatsApp connected for farm ${farmId}`);
@@ -190,23 +215,27 @@ class SessionManager {
           if (connection === 'close') {
               const reason = lastDisconnect?.error?.output?.statusCode;
               const isLoggedOut = reason === DisconnectReason.loggedOut;
-              const shouldReconnect = !isLoggedOut;
+              // 405 = invalid/restart required; 401/408 = unauthorized/replaced. Treat as "destroy auth and show new QR"
+              const isRestoreFailed = isLoggedOut ||
+                  reason === 405 ||
+                  reason === 401 ||
+                  reason === 408 ||
+                  reason === undefined;
 
-              if (isLoggedOut) {
-                  logger.info(`Farm ${farmId} logged out`);
-                  await this.destroySession(farmId, true); // True = clear DB session_id
+              if (isRestoreFailed) {
+                  logger.info(`Farm ${farmId} session invalid (reason: ${reason}). Clearing and creating new session for QR.`);
+                  await this.destroySession(farmId, true);
+                  this.scheduleReconnect(farmId, 2000);
               } else {
                   logger.info(`Farm ${farmId} disconnected (reason: ${reason}). Reconnecting...`);
                   session.status = 'connecting';
                   await farm.update({ connection_status: 'connecting' });
                   if (this.io) {
-                      this.io.emit('whatsapp_status', { farmId, status: 'connecting' });
+                      this.io.emit('whatsapp_status', { farmId: String(farmId), status: 'connecting' });
                       this.io.emit('farm_updated', farm.toJSON());
                   }
-                  
-                  // Reconnect logic: delete memory ref (but not DB/file) and re-init
-                  this.sessions.delete(farmId);
-                  setTimeout(() => this.init(farmId), 5000); // Backoff?
+                  this.sessions.delete(this._key(farmId));
+                  this.scheduleReconnect(farmId, 5000);
               }
           }
       } catch (err) {
@@ -320,7 +349,7 @@ class SessionManager {
   }
 
   async destroySession(farmId, clearDB = false) {
-      const session = this.sessions.get(farmId);
+      const session = this.sessions.get(this._key(farmId));
       
       // 1. Memory Cleanup
       if (session && session.sock) {
@@ -331,10 +360,10 @@ class SessionManager {
              // If logged out manually by user on phone, sock is already closed.
           } catch (e) { /* ignore */ }
       }
-      this.sessions.delete(farmId);
+      this.sessions.delete(this._key(farmId));
 
       // 2. File Cleanup
-      const authPath = path.join(this.baseAuthPath, farmId);
+      const authPath = path.join(this.baseAuthPath, this._key(farmId));
       if (clearDB && fs.existsSync(authPath)) {
           fs.rmSync(authPath, { recursive: true, force: true });
       }
@@ -351,7 +380,7 @@ class SessionManager {
               const updatedFarm = await Farm.findByPk(farmId); // Fetch to get full object for emit
               
               if (this.io) {
-                this.io.emit('whatsapp_status', { farmId, status: 'disconnected' });
+                this.io.emit('whatsapp_status', { farmId: String(farmId), status: 'disconnected' });
                 this.io.emit('farm_updated', updatedFarm.toJSON());
               }
           } catch (err) {
@@ -361,7 +390,7 @@ class SessionManager {
   }
 
   async logout(farmId) {
-      const session = this.sessions.get(farmId);
+      const session = this.sessions.get(this._key(farmId));
       if (session && session.sock) {
           try {
               await session.sock.logout(); // This triggers 'close' event
@@ -379,13 +408,19 @@ class SessionManager {
 
   getStatus(farmId) {
       if (!farmId) return { status: 'initializing', qr: null };
-      const session = this.sessions.get(farmId);
-      if (!session) return { status: 'disconnected', qr: null };
+      const key = this._key(farmId);
+      const session = this.sessions.get(key);
+      if (!session) {
+          if (!this.pendingInit.has(key) && !this.reconnectTimeouts.has(key)) {
+              this.init(farmId).catch((err) => logger.error('Auto-init from getStatus failed', { farmId, error: err.message }));
+          }
+          return { status: 'disconnected', qr: null };
+      }
       return { status: session.status, qr: session.qrCode };
   }
   
   async sendMessage(farmId, to, message) {
-     const session = this.sessions.get(farmId);
+     const session = this.sessions.get(this._key(farmId));
      if (!session || session.status !== 'connected') throw new Error(`WhatsApp not connected for farm ${farmId}`);
      
      let jid = to;
