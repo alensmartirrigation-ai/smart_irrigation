@@ -83,11 +83,10 @@ const PlatformSettings = ({ selectedFarm }) => {
     setLoading(true);
     try {
       await axios.post('/api/whatsapp/reconnect', { farmId: selectedFarm.id });
-      // The socket event should update status to 'initializing'/'connecting' shortly
     } catch (err) {
       console.error('Failed to reconnect:', err);
-      // Fallback reload if API fails? Or just show error?
-      // window.location.reload(); 
+    } finally {
+      setLoading(false);
     }
   };
 

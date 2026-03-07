@@ -10,30 +10,66 @@ const WhatsAppManager = () => {
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [messageStatus, setMessageStatus] = useState({ type: '', text: '' });
+  const [farmId, setFarmId] = useState(null);
 
   useEffect(() => {
+    const fetchDefaultFarm = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await axios.get('/api/farms', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (response.data && response.data.length > 0) {
+          setFarmId(response.data[0].id);
+        }
+      } catch (err) {
+        console.error('Failed to fetch default farm:', err);
+      }
+    };
+    fetchDefaultFarm();
+  }, []);
+
+  useEffect(() => {
+    if (!farmId) return;
+
+    const fetchInitialStatus = async () => {
+      try {
+        const response = await axios.get(`/api/whatsapp/status?farmId=${farmId}`);
+        setStatus(response.data.status);
+        setQr(response.data.qr);
+      } catch (err) {
+        console.error('Failed to fetch initial WhatsApp status', err);
+      }
+    };
+    fetchInitialStatus();
+
     const socket = io();
 
-    socket.on('whatsapp_status', (newStatus) => {
-      setStatus(newStatus);
-      if (newStatus === 'connected') setQr(null);
+    socket.on('whatsapp_status', (data) => {
+      if (data.farmId === farmId) {
+        setStatus(data.status);
+        if (data.status === 'connected') setQr(null);
+      }
     });
 
-    socket.on('whatsapp_qr', (qrCode) => {
-      setQr(qrCode);
-      if (qrCode) setStatus('scanning');
+    socket.on('whatsapp_qr', (data) => {
+      if (data.farmId === farmId) {
+        setQr(data.qr);
+        if (data.qr) setStatus('scanning');
+      }
     });
 
     return () => socket.disconnect();
-  }, []);
+  }, [farmId]);
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
+    if (!farmId) return;
     setLoading(true);
     setMessageStatus({ type: '', text: '' });
 
     try {
-      const response = await axios.post('/api/whatsapp/send', { to, message });
+      const response = await axios.post('/api/whatsapp/send', { farmId, to, message });
       setMessageStatus({ type: 'success', text: 'Message sent successfully!' });
       setTo('');
       setMessage('');
@@ -48,9 +84,10 @@ const WhatsAppManager = () => {
   };
 
   const handleLogout = async () => {
+    if (!farmId) return;
     if (window.confirm('Are you sure you want to logout?')) {
       try {
-        await axios.post('/api/whatsapp/logout');
+        await axios.post('/api/whatsapp/logout', { farmId });
         window.location.reload();
       } catch (error) {
         console.error('Logout failed:', error);

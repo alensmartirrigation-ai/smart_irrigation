@@ -38,6 +38,7 @@ class SessionManager {
     this.sessions = new Map(); // Map<farmId, SessionInstance>
     this.io = null;
     this.baseAuthPath = path.join(process.cwd(), 'auth_info_baileys');
+    this.reconnectDelays = new Map(); // farmId -> delay ms (for exponential backoff)
   }
 
   setIO(io) {
@@ -125,10 +126,14 @@ class SessionManager {
 
         // Step 5: Start Baileys Socket
         const { state, saveCreds } = await useMultiFileAuthState(authPath);
+        const { Browsers, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
+        const { version } = await fetchLatestBaileysVersion();
+        logger.info(`Using WA Web version: ${version.join('.')}`);
         const sock = makeWASocket({
             auth: state,
-            logger: require('pino')({ level: 'silent' }),
-            // Implement other Baileys configs if needed
+            logger: require('pino')({ level: 'warn' }),
+            browser: Browsers.ubuntu('Chrome'),
+            version,
         });
 
         // Store active session
@@ -151,6 +156,7 @@ class SessionManager {
 
   async handleConnectionUpdate(farmId, update) {
       const { connection, lastDisconnect, qr } = update;
+      logger.info(`[WA] connectionUpdate farm=${farmId}`, { connection: connection ?? 'none', hasQr: !!qr, reason: lastDisconnect?.error?.output?.statusCode });
       const session = this.sessions.get(farmId);
       if (!session) return;
 
@@ -190,23 +196,32 @@ class SessionManager {
           if (connection === 'close') {
               const reason = lastDisconnect?.error?.output?.statusCode;
               const isLoggedOut = reason === DisconnectReason.loggedOut;
-              const shouldReconnect = !isLoggedOut;
+              // 405 = stream conflict / bad/expired credentials — treat as session corruption
+              const isSessionCorrupt = reason === 405;
 
-              if (isLoggedOut) {
-                  logger.info(`Farm ${farmId} logged out`);
-                  await this.destroySession(farmId, true); // True = clear DB session_id
+              if (isLoggedOut || isSessionCorrupt) {
+                  if (isSessionCorrupt) {
+                      logger.warn(`Farm ${farmId} session corrupt/expired (reason: ${reason}). Clearing session for fresh QR.`);
+                  } else {
+                      logger.info(`Farm ${farmId} logged out`);
+                  }
+                  this.reconnectDelays.delete(farmId); // reset backoff on full logout/corrupt
+                  await this.destroySession(farmId, true);
+                  setTimeout(() => this.init(farmId), 2000);
               } else {
-                  logger.info(`Farm ${farmId} disconnected (reason: ${reason}). Reconnecting...`);
+                  // Exponential backoff: 5s → 10s → 20s → 30s cap
+                  const prevDelay = this.reconnectDelays.get(farmId) || 2500;
+                  const nextDelay = Math.min(prevDelay * 2, 30000);
+                  this.reconnectDelays.set(farmId, nextDelay);
+                  logger.info(`Farm ${farmId} disconnected (reason: ${reason}). Reconnecting in ${nextDelay}ms...`);
                   session.status = 'connecting';
                   await farm.update({ connection_status: 'connecting' });
                   if (this.io) {
                       this.io.emit('whatsapp_status', { farmId, status: 'connecting' });
                       this.io.emit('farm_updated', farm.toJSON());
                   }
-                  
-                  // Reconnect logic: delete memory ref (but not DB/file) and re-init
                   this.sessions.delete(farmId);
-                  setTimeout(() => this.init(farmId), 5000); // Backoff?
+                  setTimeout(() => this.init(farmId), nextDelay);
               }
           }
       } catch (err) {
