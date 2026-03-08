@@ -237,10 +237,10 @@ const DeviceGraphModal = ({ isOpen, onClose, device }) => {
                 )
               })}
 
-              {visibleMetrics.moisture && <Line yAxisId="right" type="monotone" dataKey="moisture" name="Moisture" stroke="#8884d8" dot={false} strokeWidth={1.5} isAnimationActive={false} connectNulls />}
+              {visibleMetrics.moisture && <Line yAxisId="right" type="linear" dataKey="moisture" name="Moisture" stroke="#8884d8" dot={false} strokeWidth={1.5} isAnimationActive={false} connectNulls />}
               {visibleMetrics.irrigation && <Bar yAxisId="right" dataKey="irrigation_duration" name="Duration" fill="#00d2ff" barSize={10} opacity={0.4} isAnimationActive={false} />}
-              {visibleMetrics.temperature && <Line yAxisId="left" type="monotone" dataKey="temperature" name="Temperature" stroke="#ff7300" dot={false} strokeWidth={1.5} isAnimationActive={false} />}
-              {visibleMetrics.humidity && <Line yAxisId="right" type="monotone" dataKey="humidity" name="Humidity" stroke="#387908" dot={false} strokeWidth={1.5} isAnimationActive={false} />}
+              {visibleMetrics.temperature && <Line yAxisId="left" type="linear" dataKey="temperature" name="Temperature" stroke="#ff7300" dot={false} strokeWidth={1.5} isAnimationActive={false} connectNulls />}
+              {visibleMetrics.humidity && <Line yAxisId="right" type="linear" dataKey="humidity" name="Humidity" stroke="#387908" dot={false} strokeWidth={1.5} isAnimationActive={false} connectNulls />}
             </ComposedChart>
           </ResponsiveContainer>
         )}
