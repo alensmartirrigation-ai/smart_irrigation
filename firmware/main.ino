@@ -30,12 +30,12 @@
 // ============================================================
 //  Device & Cloud
 // ============================================================
-static const char* DEVICE_NAME = "Field Unit 1";
-static const char* FARM_ID     = "bd17c7be-9f95-4a56-ad35-a698d37d3513";
-static const char* DEVICE_ID   = "b517b2a6-442e-46aa-873a-7adc0eb3840a";
+static const char* DEVICE_NAME = "Chilly";
+static const char* FARM_ID     = "b04eaa68-cc1e-4817-8ba2-da6e0f074648";
+static const char* DEVICE_ID   = "0a6bc08f-b6bd-48ee-8d78-dad81debaa93";
 
-static const char* WIFI_SSID = "test";
-static const char* WIFI_PASS = "test12345";
+static const char* WIFI_SSID = "V_R0N1CA";
+static const char* WIFI_PASS = "jebin7037";
 
 static const char* API_SENSOR = "http://ec2-3-108-190-207.ap-south-1.compute.amazonaws.com:4000/api/sensor/ingest";
 static const char* API_START  = "http://ec2-3-108-190-207.ap-south-1.compute.amazonaws.com:4000/api/irrigation/log/start";
@@ -45,8 +45,8 @@ static const char* API_RECORD = "http://ec2-3-108-190-207.ap-south-1.compute.ama
 // ============================================================
 //  Timing
 // ============================================================
-static constexpr unsigned long SENSOR_MS      = 10000;
-static constexpr unsigned long UPLOAD_MS      = 60000;
+static constexpr unsigned long SENSOR_MS      = 20000;
+static constexpr unsigned long UPLOAD_MS      = 30000;
 static constexpr unsigned long BUF_SYNC_MS    = 10000;
 static constexpr unsigned long WIFI_CHECK_MS  = 5000;
 static constexpr unsigned long SMS_TICK_MS    = 1000;
