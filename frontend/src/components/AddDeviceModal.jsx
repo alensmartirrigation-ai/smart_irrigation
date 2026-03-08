@@ -111,8 +111,8 @@ const AddDeviceModal = ({ isOpen, onClose, onDeviceAdded, deviceToEdit = null })
         </div>
         <div className="input-field-nm">
           <Farm size={18} />
-          <select name="farmId" value={formData.farmId} onChange={handleChange}>
-            <option value="">Select Farm (Optional)</option>
+          <select name="farmId" value={formData.farmId} onChange={handleChange} required>
+            <option value="" disabled>Select Farm *</option>
             {farms.map(farm => (
               <option key={farm.id} value={farm.id}>{farm.name}</option>
             ))}
