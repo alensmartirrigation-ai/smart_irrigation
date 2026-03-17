@@ -78,10 +78,12 @@
  static constexpr size_t MAX_BUF_BYTES = 40 * 1024;
  static constexpr int    STREAM_CHUNK  = 256;
  
- // Soil calibration
- static constexpr int SOIL_DRY_RAW    = 4095;
- static constexpr int SOIL_WET_RAW    = 1500;
- static constexpr int SOIL_FAULT_RAW  = 4095;
+// Soil calibration
+static constexpr int SOIL_DRY_RAW    = 4095;
+static constexpr int SOIL_WET_RAW    = 1500;
+// Treat an extreme low reading as a sensor fault (short/disconnected),
+// instead of colliding with the valid "completely dry" high reading.
+static constexpr int SOIL_FAULT_RAW  = 0;
  static constexpr int SOIL_SAMPLES    = 5;
  static constexpr int SOIL_SAMPLE_DLY = 10;
  static constexpr int FAULT_THRESHOLD = 3;
@@ -109,6 +111,33 @@
    unsigned long minOnMs        = 20000;
    unsigned long minOffMs       = 20000;
  };
+
+// Apply JSON configuration to the in-memory irrigation config, with sane clamping.
+static void applyConfigJson(const JsonObject& o) {
+  cfg.soilStartBelow = o["soilStartBelow"] | cfg.soilStartBelow;
+  cfg.soilStopAbove  = o["soilStopAbove"]  | cfg.soilStopAbove;
+  cfg.tempStartAbove = o["tempStartAbove"] | cfg.tempStartAbove;
+  cfg.tempStopBelow  = o["tempStopBelow"]  | cfg.tempStopBelow;
+  cfg.humStartBelow  = o["humStartBelow"]  | cfg.humStartBelow;
+  cfg.humStopAbove   = o["humStopAbove"]   | cfg.humStopAbove;
+  cfg.minOnMs        = o["minOnMs"]        | (long)cfg.minOnMs;
+  cfg.minOffMs       = o["minOffMs"]       | (long)cfg.minOffMs;
+
+  // Ensure basic invariants to avoid nonsensical config from the backend.
+  cfg.soilStartBelow = constrain(cfg.soilStartBelow, 0, 100);
+  cfg.soilStopAbove  = constrain(cfg.soilStopAbove,  0, 100);
+  if (cfg.soilStopAbove < cfg.soilStartBelow) {
+    cfg.soilStopAbove = cfg.soilStartBelow + 1;
+  }
+  if (cfg.tempStopBelow > cfg.tempStartAbove) {
+    cfg.tempStopBelow = cfg.tempStartAbove - 1;
+  }
+  if (cfg.humStopAbove < cfg.humStartBelow) {
+    cfg.humStopAbove = cfg.humStartBelow + 1;
+  }
+  cfg.minOnMs  = std::max<unsigned long>(5000UL, cfg.minOnMs);
+  cfg.minOffMs = std::max<unsigned long>(5000UL, cfg.minOffMs);
+}
  
  enum AutoState : uint8_t { AUTO_IDLE, AUTO_IRRIGATING, AUTO_COOLDOWN };
  
@@ -158,7 +187,11 @@
    }
    void push(const String& m) { push(m.c_str()); }
    const char* front() const  { return msgs[head]; }
-   void pop() { head = (head + 1) % SMS_Q_CAP; count--; }
+   void pop() {
+     if (count <= 0) return;
+     head = (head + 1) % SMS_Q_CAP;
+     count--;
+   }
  };
  
  struct Sys {
@@ -489,14 +522,7 @@
    StaticJsonDocument<512> doc;
    auto err = deserializeJson(doc, f); f.close();
    if (err) { Serial.printf("[Config] Parse error: %s\n", err.c_str()); return; }
-   cfg.soilStartBelow = doc["soilStartBelow"] | cfg.soilStartBelow;
-   cfg.soilStopAbove  = doc["soilStopAbove"]  | cfg.soilStopAbove;
-   cfg.tempStartAbove = doc["tempStartAbove"] | cfg.tempStartAbove;
-   cfg.tempStopBelow  = doc["tempStopBelow"]  | cfg.tempStopBelow;
-   cfg.humStartBelow  = doc["humStartBelow"]  | cfg.humStartBelow;
-   cfg.humStopAbove   = doc["humStopAbove"]   | cfg.humStopAbove;
-   cfg.minOnMs        = doc["minOnMs"]        | (long)cfg.minOnMs;
-   cfg.minOffMs       = doc["minOffMs"]       | (long)cfg.minOffMs;
+  applyConfigJson(doc.as<JsonObject>());
    Serial.println(F("[Config] Loaded"));
  }
  
@@ -754,15 +780,8 @@
      irr.manualEndMs = 0;
      Serial.println(F("[Cmd] STOP"));
    } else if (strcmp(type, "UPDATE_CONFIG") == 0) {
-     JsonObject p = cmd["payload"];
-     cfg.soilStartBelow = p["soilStartBelow"] | cfg.soilStartBelow;
-     cfg.soilStopAbove  = p["soilStopAbove"]  | cfg.soilStopAbove;
-     cfg.tempStartAbove = p["tempStartAbove"] | cfg.tempStartAbove;
-     cfg.tempStopBelow  = p["tempStopBelow"]  | cfg.tempStopBelow;
-     cfg.humStartBelow  = p["humStartBelow"]  | cfg.humStartBelow;
-     cfg.humStopAbove   = p["humStopAbove"]   | cfg.humStopAbove;
-     cfg.minOnMs        = p["minOnMs"]        | (long)cfg.minOnMs;
-     cfg.minOffMs       = p["minOffMs"]       | (long)cfg.minOffMs;
+    JsonObject p = cmd["payload"];
+    applyConfigJson(p);
      saveConfig();
      Serial.println(F("[Cmd] Config updated"));
    }
@@ -810,10 +829,31 @@
    WiFi.persistent(false);
    wifiBeginConnect();
  
-   esp_task_wdt_deinit();
- 
-   sys.lastLoopMs = millis();
-   sys.gsmPhase   = GSM_IDLE;   // FSM starts immediately on first taskGsm() tick
+  esp_task_wdt_deinit();
+
+  // Explicitly initialise system state to avoid relying on zeroed BSS only.
+  unsigned long now = millis();
+  sys.lastLoopMs     = now;
+  sys.lastSensorMs   = now;
+  sys.lastDecisionMs = now;
+  sys.lastUploadMs   = now;
+  sys.lastBufSyncMs  = now;
+  sys.lastWifiMs     = now;
+  sys.lastGsmMs      = now;
+  sys.lastSmsMs      = now;
+  sys.lastRelayMs    = now;
+
+  sys.wfPhase        = WF_IDLE;
+  sys.wfConnStartMs  = now;
+  sys.prevWifiUp     = false;
+
+  sys.gsmPhase          = GSM_IDLE;   // FSM starts immediately on first taskGsm() tick
+  sys.gsmStateEnteredMs = now;
+  sys.prevGsmReady      = false;
+
+  sys.backendUp   = false;
+  sys.soilFaultRun = 0;
+  sys.dhtFaultRun  = 0;
  
    Serial.printf("[Boot] Farm  : %s\n", FARM_ID);
    Serial.printf("[Boot] Device: %s (%s)\n", DEVICE_ID, DEVICE_NAME);
