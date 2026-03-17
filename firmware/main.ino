@@ -6,6 +6,9 @@
  *   offline buffer replay, WiFi/GSM state machines, and SMS alerts.
  */
 
+#define TINY_GSM_MODEM_SIM800
+#define TINY_GSM_RX_BUFFER 1024
+
 #include <Arduino.h>
 #include <DHT.h>
 #include <WiFi.h>
@@ -14,6 +17,7 @@
 #include <time.h>
 #include <esp_task_wdt.h>
 #include <algorithm>
+#include <TinyGsmClient.h>
 
 // ============================================================
 //  Hardware Pins
@@ -22,8 +26,11 @@
 #define DHTTYPE      DHT11
 #define SOIL_PIN     34
 #define RELAY_PIN    23
-#define GSM_UART_RX  16
-#define GSM_UART_TX  17
+
+// GSM modem pins (SIM800)
+#define MODEM_TX     27
+#define MODEM_RX     26
+#define MODEM_PWRKEY 4
 
 // ============================================================
 //  Device & Cloud
@@ -34,6 +41,8 @@ static const char* DEVICE_ID   = "0a6bc08f-b6bd-48ee-8d78-dad81debaa93";
 
 static const char* WIFI_SSID = "V_R0N1CA";
 static const char* WIFI_PASS = "jebin7037";
+
+static const char* PHONE_NUMBER = "+918129437037";
 
 static const char* API_SENSOR = "http://ec2-3-108-190-207.ap-south-1.compute.amazonaws.com:4000/api/sensor/ingest";
 static const char* API_START  = "http://ec2-3-108-190-207.ap-south-1.compute.amazonaws.com:4000/api/irrigation/log/start";
@@ -111,6 +120,70 @@ struct Sys {
   int soilFaultRun;
   int dhtFaultRun;
 };
+
+// ============================================================
+//  GSM / SMS (TinyGSM)
+// ============================================================
+HardwareSerial SerialGsm(1);
+TinyGsm modem(SerialGsm);
+
+static void powerOnModem() {
+  pinMode(MODEM_PWRKEY, OUTPUT);
+  digitalWrite(MODEM_PWRKEY, HIGH);
+  delay(1000);
+  digitalWrite(MODEM_PWRKEY, LOW);
+  delay(1200);
+  digitalWrite(MODEM_PWRKEY, HIGH);
+}
+
+static void gsmConnectNetwork() {
+  Serial.println(F("[GSM] Connecting to network..."));
+
+  while (!modem.waitForNetwork(30000)) {
+    Serial.println(F("[GSM] Network failed. Restarting modem..."));
+    modem.restart();
+    delay(5000);
+  }
+
+  Serial.println(F("[GSM] Network connected."));
+}
+
+static void gsmEnsureNetwork() {
+  if (!modem.isNetworkConnected()) {
+    Serial.println(F("[GSM] Network lost. Reconnecting..."));
+    gsmConnectNetwork();
+  }
+}
+
+static void sendSMSMessage(const String& messageIn) {
+  String message = messageIn;
+  message.trim();
+  if (message.length() == 0) return;
+
+  gsmEnsureNetwork();
+
+  Serial.println("[GSM] Sending SMS: " + message);
+
+  bool success = false;
+  int attempts = 0;
+
+  while (!success && attempts < 3) {
+    success = modem.sendSMS(PHONE_NUMBER, message);
+
+    if (!success) {
+      Serial.println(F("[GSM] SMS failed. Retrying..."));
+      gsmEnsureNetwork();
+      attempts++;
+      delay(3000);
+    }
+  }
+
+  if (success) {
+    Serial.println(F("[GSM] SMS sent successfully."));
+  } else {
+    Serial.println(F("[GSM] SMS permanently failed."));
+  }
+}
 
 // ============================================================
 //  Globals
@@ -390,9 +463,18 @@ void setup() {
 
   dht.begin();
 
-  // Send a one-time startup SMS via the GSM bridge ESP32
-  Serial2.begin(9600, SERIAL_8N1, GSM_UART_RX, GSM_UART_TX);
-  Serial2.println(F("sms_string:Irrigation system is up and ready."));
+  // Initialize GSM modem on this ESP32 and send startup SMS directly
+  Serial.println(F("[GSM] Powering modem..."));
+  powerOnModem();
+
+  SerialGsm.begin(9600, SERIAL_8N1, MODEM_RX, MODEM_TX);
+  delay(5000);
+
+  Serial.println(F("[GSM] Initializing modem..."));
+  modem.restart();
+  gsmConnectNetwork();
+
+  sendSMSMessage(F("Irrigation system is up and ready."));
 
   WiFi.mode(WIFI_STA);
   WiFi.setAutoReconnect(true);
