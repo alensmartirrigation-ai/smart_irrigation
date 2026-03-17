@@ -6,9 +6,6 @@
  *   offline buffer replay, WiFi/GSM state machines, and SMS alerts.
  */
 
-#define TINY_GSM_MODEM_SIM800
-#define TINY_GSM_RX_BUFFER 1024
-
 #include <Arduino.h>
 #include <DHT.h>
 #include <WiFi.h>
@@ -17,7 +14,15 @@
 #include <time.h>
 #include <esp_task_wdt.h>
 #include <algorithm>
+
+// Enable/disable GSM features at compile time
+#define GSM_ENABLED 1
+
+#if GSM_ENABLED
+#define TINY_GSM_MODEM_SIM800
+#define TINY_GSM_RX_BUFFER 1024
 #include <TinyGsmClient.h>
+#endif
 
 // ============================================================
 //  Hardware Pins
@@ -28,9 +33,11 @@
 #define RELAY_PIN    23
 
 // GSM modem pins (SIM800)
+#if GSM_ENABLED
 #define MODEM_TX     27
 #define MODEM_RX     26
 #define MODEM_PWRKEY 4
+#endif
 
 // ============================================================
 //  Device & Cloud
@@ -122,8 +129,9 @@ struct Sys {
 };
 
 // ============================================================
-//  GSM / SMS (TinyGSM)
+//  GSM / SMS (TinyGSM) — optional
 // ============================================================
+#if GSM_ENABLED
 HardwareSerial SerialGsm(1);
 TinyGsm modem(SerialGsm);
 
@@ -155,6 +163,10 @@ static void gsmEnsureNetwork() {
   }
 }
 
+void taskGsm() {
+  gsmEnsureNetwork();
+}
+
 static void sendSMSMessage(const String& messageIn) {
   String message = messageIn;
   message.trim();
@@ -184,6 +196,14 @@ static void sendSMSMessage(const String& messageIn) {
     Serial.println(F("[GSM] SMS permanently failed."));
   }
 }
+#else
+// GSM disabled: provide no-op stubs so the rest of the code compiles
+static void powerOnModem() {}
+static void gsmConnectNetwork() {}
+static void gsmEnsureNetwork() {}
+void taskGsm() {}
+static void sendSMSMessage(const String&) {}
+#endif
 
 // ============================================================
 //  Globals
@@ -201,6 +221,7 @@ void taskSensor();
 void taskDecision();
 void taskRelay();
 void taskUpload();
+void taskGsm();
 
 String payloadIrrEvent(time_t ts);
 String payloadIrrDuration(float mins);
@@ -221,6 +242,9 @@ static Task tasks[] = {
   { "decide",  SENSOR_MS,     &sys.lastDecisionMs,  taskDecision },
   { "relay",   RELAY_MS,      &sys.lastRelayMs,     taskRelay    },
   { "upload",  UPLOAD_MS,     &sys.lastUploadMs,    taskUpload   },
+#if GSM_ENABLED
+  { "gsm",     60000UL,       nullptr,              taskGsm      },
+#endif
 };
 static constexpr int TASK_COUNT = sizeof(tasks) / sizeof(tasks[0]);
 
@@ -463,6 +487,7 @@ void setup() {
 
   dht.begin();
 
+#if GSM_ENABLED
   // Initialize GSM modem on this ESP32 and send startup SMS directly
   Serial.println(F("[GSM] Powering modem..."));
   powerOnModem();
@@ -475,6 +500,7 @@ void setup() {
   gsmConnectNetwork();
 
   sendSMSMessage(F("Irrigation system is up and ready."));
+#endif
 
   WiFi.mode(WIFI_STA);
   WiFi.setAutoReconnect(true);
