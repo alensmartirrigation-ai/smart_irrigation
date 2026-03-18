@@ -2,9 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Users, 
-  Trees as Farm, 
   Cpu, 
-  Settings, 
   LogOut, 
   User,
   Sprout,
@@ -12,7 +10,6 @@ import {
 } from 'lucide-react';
 import { logout } from '../utils/auth';
 import UserList from '../components/UserList';
-import FarmList from '../components/FarmList';
 import DashboardHeader from '../components/DashboardHeader';
 import FarmSelector from '../components/FarmSelector';
 import PlatformSettings from '../components/PlatformSettings';
@@ -34,8 +31,6 @@ const Home = () => {
     { id: 'devices', label: 'Devices', icon: <Cpu size={20} /> },
     { id: 'platform-settings', label: 'Platform Settings', icon: <Smartphone size={20} /> },
   ];
-
-  const handleConnectWhatsApp = () => navigate('/connect-whatsapp');
 
   return (
     <div className="dashboard-container">
@@ -59,10 +54,6 @@ const Home = () => {
               <span>{item.label}</span>
             </div>
           ))}
-          <div className="nav-item" onClick={handleConnectWhatsApp}>
-            <Smartphone size={20} />
-            <span>Connect WhatsApp</span>
-          </div>
         </nav>
 
         <div className="logout-section">
