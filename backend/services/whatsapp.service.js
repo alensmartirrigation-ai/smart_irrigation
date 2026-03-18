@@ -246,7 +246,12 @@ class SessionManager {
     for (const msg of messages) {
       if (msg.key.fromMe || !msg.message) continue;
 
-      const remoteJid = msg.key.remoteJid;
+      // Some Baileys message payloads may provide the sender JID in different fields.
+      const remoteJid = msg.key.remoteJidAlt || msg.key.remoteJid;
+      if (!remoteJid) {
+        logger.warn(`WhatsApp message missing remote JID fields for farm ${farmId}. Skipping.`);
+        continue;
+      }
       const textContent = msg.message.conversation || msg.message.extendedTextMessage?.text;
       
       if (!textContent) continue;
