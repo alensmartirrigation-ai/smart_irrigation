@@ -160,10 +160,14 @@ class SessionManager {
 
         // Step 5: Start Baileys Socket
         const { state, saveCreds } = await useMultiFileAuthState(authPath);
+        const { Browsers, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
+        const { version } = await fetchLatestBaileysVersion();
+        logger.info(`Using WA Web version: ${version.join('.')}`);
         const sock = makeWASocket({
             auth: state,
-            logger: require('pino')({ level: 'silent' }),
-            // Implement other Baileys configs if needed
+            logger: require('pino')({ level: 'warn' }),
+            browser: Browsers.ubuntu('Chrome'),
+            version,
         });
 
         // Store active session (key so GET ?farmId=X finds session whether X is string or number)

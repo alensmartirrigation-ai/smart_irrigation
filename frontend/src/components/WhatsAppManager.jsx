@@ -15,26 +15,31 @@ const WhatsAppManager = () => {
     const socketUrl = import.meta.env.DEV ? 'http://localhost:4000' : '';
     const socket = io(socketUrl);
 
-    socket.on('whatsapp_status', (newStatus) => {
-      setStatus(newStatus);
-      if (newStatus === 'connected') setQr(null);
+    socket.on('whatsapp_status', (data) => {
+      if (data.farmId === farmId) {
+        setStatus(data.status);
+        if (data.status === 'connected') setQr(null);
+      }
     });
 
-    socket.on('whatsapp_qr', (qrCode) => {
-      setQr(qrCode);
-      if (qrCode) setStatus('scanning');
+    socket.on('whatsapp_qr', (data) => {
+      if (data.farmId === farmId) {
+        setQr(data.qr);
+        if (data.qr) setStatus('scanning');
+      }
     });
 
     return () => socket.disconnect();
-  }, []);
+  }, [farmId]);
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
+    if (!farmId) return;
     setLoading(true);
     setMessageStatus({ type: '', text: '' });
 
     try {
-      const response = await axios.post('/api/whatsapp/send', { to, message });
+      const response = await axios.post('/api/whatsapp/send', { farmId, to, message });
       setMessageStatus({ type: 'success', text: 'Message sent successfully!' });
       setTo('');
       setMessage('');
@@ -49,9 +54,10 @@ const WhatsAppManager = () => {
   };
 
   const handleLogout = async () => {
+    if (!farmId) return;
     if (window.confirm('Are you sure you want to logout?')) {
       try {
-        await axios.post('/api/whatsapp/logout');
+        await axios.post('/api/whatsapp/logout', { farmId });
         window.location.reload();
       } catch (error) {
         console.error('Logout failed:', error);
