@@ -15,6 +15,80 @@
   margin: 0 auto 10px auto;
 }
 
+.search-bar {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+  background: var(--nm-bg);
+  box-shadow: inset 4px 4px 8px var(--nm-shadow), inset -4px -4px 8px var(--nm-light);
+  border-radius: 12px;
+  color: var(--nm-text-light);
+}
+
+.search-bar input {
+  background: transparent;
+  border: none;
+  outline: none;
+  width: 100%;
+  color: var(--nm-text);
+  font-family: inherit;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 15px;
+}
+
+.refresh-btn {
+  padding: 12px;
+  background: var(--nm-bg);
+  box-shadow: 4px 4px 8px var(--nm-shadow), -4px -4px 8px var(--nm-light);
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  color: var(--nm-accent);
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.refresh-btn:active {
+  box-shadow: inset 4px 4px 8px var(--nm-shadow), inset -4px -4px 8px var(--nm-light);
+  transform: scale(0.95);
+}
+
+.refresh-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.add-btn-nm {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: var(--nm-bg);
+  box-shadow: 4px 4px 8px var(--nm-shadow), -4px -4px 8px var(--nm-light);
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  color: var(--nm-accent);
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.add-btn-nm:hover {
+  transform: translateY(-2px);
+}
+
+.add-btn-nm:active {
+  box-shadow: inset 4px 4px 8px var(--nm-shadow), inset -4px -4px 8px var(--nm-light);
+  transform: translateY(0);
+}
+
 .device-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
