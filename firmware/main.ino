@@ -57,12 +57,17 @@
  static const char* WIFI_SSID = "V_R0N1CA";
  static const char* WIFI_PASS = "jebin7037";
  
- static const char* PHONE_NUMBER = "+918129437037";
- 
- static const char* API_SENSOR = "http://ec2-3-108-190-207.ap-south-1.compute.amazonaws.com:4000/api/sensor/ingest";
- static const char* API_START  = "http://ec2-3-108-190-207.ap-south-1.compute.amazonaws.com:4000/api/irrigation/log/start";
- static const char* API_STOP   = "http://ec2-3-108-190-207.ap-south-1.compute.amazonaws.com:4000/api/irrigation/log/stop";
- static const char* API_RECORD = "http://ec2-3-108-190-207.ap-south-1.compute.amazonaws.com:4000/api/irrigation";
+static const char* WIFI_SSID = "test";
+static const char* WIFI_PASS = "test1234";
+
+static const char* PHONE_NUMBER = "+918129437037";
+
+#define BASE_URL "http://ec2-65-2-38-210.ap-south-1.compute.amazonaws.com:4000"
+
+static const char* API_SENSOR = BASE_URL "/api/sensor/ingest";
+static const char* API_START  = BASE_URL "/api/irrigation/log/start";
+static const char* API_STOP   = BASE_URL "/api/irrigation/log/stop";
+static const char* API_RECORD = BASE_URL "/api/irrigation";
  
  // ============================================================
  //  Timing
@@ -525,7 +530,29 @@
  void taskUpload() {
    String payload = payloadSensor(lastReading);
    String resp;
-   httpPost(API_SENSOR, payload, resp);
+   if (httpPost(API_SENSOR, payload, resp)) {
+     StaticJsonDocument<512> doc;
+     DeserializationError err = deserializeJson(doc, resp);
+     if (!err) {
+       JsonArray commands = doc["commands"];
+       if (!commands.isNull()) {
+         for (JsonObject cmd : commands) {
+           const char* command = cmd["command"];
+           if (command && strcmp(command, "START_IRRIGATION") == 0) {
+             int duration = cmd["payload"]["duration"] | 60;
+             irr.manualEndMs = millis() + (duration * 1000UL);
+             irr.safetyTripped = false;
+             Serial.printf("[Command] START_IRRIGATION %d sec\n", duration);
+           } else if (command && strcmp(command, "STOP_IRRIGATION") == 0) {
+             irr.manualEndMs = 0;
+             Serial.println("[Command] STOP_IRRIGATION");
+           }
+         }
+       }
+     } else {
+       Serial.printf("[Upload] JSON parse failed: %s\n", err.c_str());
+     }
+   }
  }
  
  // ============================================================
