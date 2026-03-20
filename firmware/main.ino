@@ -57,7 +57,7 @@
 static const char* WIFI_SSID = "test";
 static const char* WIFI_PASS = "test1234";
 
-static const char* PHONE_NUMBER = "+918129437037";
+static const char* PHONE_NUMBER = "+917012248576";
 
 #define BASE_URL "http://ec2-65-2-38-210.ap-south-1.compute.amazonaws.com:4000"
 
