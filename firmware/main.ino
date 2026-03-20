@@ -54,9 +54,6 @@
  static const char* FARM_ID     = "b04eaa68-cc1e-4817-8ba2-da6e0f074648";
  static const char* DEVICE_ID   = "0a6bc08f-b6bd-48ee-8d78-dad81debaa93";
  
- static const char* WIFI_SSID = "V_R0N1CA";
- static const char* WIFI_PASS = "jebin7037";
- 
 static const char* WIFI_SSID = "test";
 static const char* WIFI_PASS = "test1234";
 
