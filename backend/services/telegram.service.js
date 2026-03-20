@@ -52,6 +52,13 @@ class TelegramService {
 
   async registerWebhook() {
     try {
+      const infoRes = await axios.get(`${this.apiBase}/getWebhookInfo`);
+      if (infoRes.data.result.url === this.webhookUrl && infoRes.data.result.has_custom_certificate) {
+          logger.info('Webhook already registered with a custom certificate, skipping re-registration.');
+          this.webhookHealth = true;
+          return;
+      }
+
       const url = `${this.apiBase}/setWebhook`;
       const payload = { url: this.webhookUrl };
       if (this.webhookSecret) {
