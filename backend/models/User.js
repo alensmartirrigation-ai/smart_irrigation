@@ -43,6 +43,7 @@ const User = sequelize.define('User', {
 
 User.associate = (models) => {
   User.belongsTo(models.Farm, { foreignKey: 'farm_id' });
+  User.hasMany(models.UserChannelIdentity, { foreignKey: 'user_id' });
 };
 
 module.exports = User;

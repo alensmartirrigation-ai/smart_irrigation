@@ -4,8 +4,9 @@ const path = require('path');
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
 const logger = require('../utils/logger');
-const aiService = require('./ai.service');
 const { Farm } = require('../models');
+const inboundMessagingService = require('./inboundMessaging.service');
+const channelStateService = require('./channelState.service');
 
 // Silence verbose logs from libsignal (used by Baileys)
 const originalConsoleInfo = console.info;
@@ -157,6 +158,7 @@ class SessionManager {
         } else {
              await farm.update({ connection_status: 'connecting' });
         }
+        await channelStateService.updateState(farmId, 'whatsapp', 'connecting');
 
         // Step 5: Start Baileys Socket
         const { state, saveCreds } = await useMultiFileAuthState(authPath);
@@ -216,6 +218,7 @@ class SessionManager {
                   session.qrCode = qrCodeData;
 
                   await farm.update({ connection_status: 'qr_pending' });
+                  await channelStateService.updateState(farmId, 'whatsapp', 'qr_pending');
 
                   if (this.io) {
                       this.io.emit('whatsapp_qr', { farmId: String(farmId), qr: qrCodeData });
@@ -234,6 +237,7 @@ class SessionManager {
                   connection_status: 'connected',
                   last_connected_at: new Date()
               });
+              await channelStateService.updateState(farmId, 'whatsapp', 'connected');
 
               if (this.io) {
                   this.io.emit('whatsapp_status', { farmId: String(farmId), status: 'connected' });
@@ -276,6 +280,7 @@ class SessionManager {
                       const s = this.sessions.get(key);
                       if (s) s.status = 'connecting';
                       farm.update({ connection_status: 'connecting' }).then(() => {
+                          channelStateService.updateState(farmId, 'whatsapp', 'connecting');
                           if (this.io) {
                               this.io.emit('whatsapp_status', { farmId: String(farmId), status: 'connecting' });
                               this.io.emit('farm_updated', farm.toJSON());
@@ -309,96 +314,21 @@ class SessionManager {
     for (const msg of messages) {
       if (msg.key.fromMe || !msg.message) continue;
 
-      // Some Baileys message payloads may provide the sender JID in different fields.
       const remoteJid = msg.key.remoteJidAlt || msg.key.remoteJid;
-      if (!remoteJid) {
-        logger.warn(`WhatsApp message missing remote JID fields for farm ${farmId}. Skipping.`);
-        continue;
-      }
-      const textContent = msg.message.conversation || msg.message.extendedTextMessage?.text;
+      if (!remoteJid) continue;
       
+      const textContent = msg.message.conversation || msg.message.extendedTextMessage?.text;
       if (!textContent) continue;
 
-      logger.info(`📩 Received from ${remoteJid} for farm ${farmId}: ${textContent}`);
-
-      // --- AUTHENTICATION CHECK ---
-      const { User } = require('../models');
-      try {
-        const senderPhoneRaw = remoteJid.split('@')[0];
-        const cleanedSenderPhone = senderPhoneRaw.replace(/\D/g, '');
-        
-        const usersWithAccess = await User.findAll({ where: { farm_id: farmId } });
-        const hasAccess = usersWithAccess.some(user => {
-          if (!user.phone) return false;
-          const cleanedDbPhone = user.phone.replace(/\D/g, '');
-          // Match the last 10 digits as a reliable comparison across different country code formats (+91, 91, etc)
-          const dbLast10 = cleanedDbPhone.slice(-10);
-          const senderLast10 = cleanedSenderPhone.slice(-10);
-          return dbLast10 === senderLast10;
-        });
-
-        if (!hasAccess) {
-          logger.warn(`Unauthorized WhatsApp message from ${remoteJid} to farm ${farmId} (Ignored)`);
-          continue;
+      await inboundMessagingService.handleInboundMessage({
+        provider: 'whatsapp',
+        farmId,
+        sender: remoteJid,
+        text: textContent,
+        reply: async (replyText) => {
+          await this.sendMessage(farmId, remoteJid, replyText);
         }
-      } catch (authError) {
-        logger.error('WhatsApp auth check failed', { error: authError.message });
-        continue; // Safer to block if DB check fails
-      }
-
-      // Improved command detection for pump control
-      const lower = textContent.toLowerCase();
-      if (lower.includes('turn on pump')) {
-        const { Device, Farm } = require('../models');
-        try {
-          // Extract UUID if present
-          const uuidRegex = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
-          const match = textContent.match(uuidRegex);
-          const providedDeviceId = match ? match[0] : null;
-
-          // Query devices through Farm association (many-to-many via FarmDevice)
-          const farm = await Farm.findByPk(farmId, {
-            include: [{ model: Device }]
-          });
-          const devices = farm ? farm.Devices : [];
-
-          if (providedDeviceId) {
-            const device = devices.find(d => d.id === providedDeviceId);
-            if (device) {
-              await this.startIrrigationForDevice(device.id);
-              await this.sendMessage(farmId, remoteJid, `✅ Pump turned on for device: ${device.name || device.id}`);
-            } else {
-              await this.sendMessage(farmId, remoteJid, `⚠️ Device ${providedDeviceId} not found or doesn't belong to this farm.`);
-            }
-          } else {
-            if (devices.length === 0) {
-              await this.sendMessage(farmId, remoteJid, '⚠️ No devices found for this farm.');
-            } else if (devices.length === 1) {
-              await this.startIrrigationForDevice(devices[0].id);
-              await this.sendMessage(farmId, remoteJid, `✅ Pump turned on for device: ${devices[0].name || devices[0].id}`);
-            } else {
-              const deviceList = devices.map(d => `- ${d.name || 'Unnamed'}: ${d.id}`).join('\n');
-              await this.sendMessage(farmId, remoteJid, `Multiple devices found. Please reply with "turn on pump [ID]":\n${deviceList}`);
-            }
-          }
-          continue; // skip AI processing for this message
-        } catch (e) {
-          logger.error('Failed to handle pump WhatsApp command', { error: e.message });
-          await this.sendMessage(farmId, remoteJid, '⚠️ Failed to process pump command.');
-          continue;
-        }
-      }
-
-      // AI handling
-      try {
-        const reply = await aiService.generateResponse(textContent, [], { 
-          conversationId: `${farmId}:${remoteJid}`, 
-          farmId: farmId 
-        });
-        await this.sendMessage(farmId, remoteJid, reply);
-      } catch (error) {
-        logger.error('Failed to send AI auto-reply', { farmId, error: error.message });
-      }
+      });
     }
   }
 
@@ -425,6 +355,7 @@ class SessionManager {
                   connection_status: 'disconnected', 
                   last_disconnect_reason: 'logged_out' 
               }, { where: { id: farmId } });
+              await channelStateService.updateState(farmId, 'whatsapp', 'disconnected');
               
               const updatedFarm = await Farm.findByPk(farmId); // Fetch to get full object for emit
               

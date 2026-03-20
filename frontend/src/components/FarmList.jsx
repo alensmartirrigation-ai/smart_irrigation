@@ -110,7 +110,18 @@ const FarmList = () => {
               <div className="farm-card-body">
                 <h3>{farm.name}</h3>
                 <p className="farm-id">ID: {farm.id.substring(0, 8)}...</p>
-                <p className="platform">Platform: {farm.message_platform || 'N/A'}</p>
+                
+                <div className="channels-badges" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '10px' }}>
+                   {farm.FarmChannels && farm.FarmChannels.map(ch => (
+                     <span key={ch.provider} className={`status-badge ${ch.status}`}>
+                       {ch.provider}: {ch.status}
+                     </span>
+                   ))}
+                   {/* Backward compat for old field if channels model missing */}
+                   {(!farm.FarmChannels || farm.FarmChannels.length === 0) && (
+                      <span className="status-badge legacy">Legacy {farm.message_platform || 'N/A'}</span>
+                   )}
+                </div>
               </div>
               {isAdmin && (
                 <>

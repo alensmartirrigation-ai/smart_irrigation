@@ -12,6 +12,11 @@ const envSchema = z.object({
   OPENAI_API_KEY: z.string().min(1).optional(),
   OPENAI_MODEL: z.string().min(1).default('gpt-4o-mini'),
   DEFAULT_FARM_ID: z.string().min(1).optional(),
+  ENABLE_TELEGRAM: z.coerce.boolean().default(false),
+  TELEGRAM_BOT_TOKEN: z.string().optional(),
+  TELEGRAM_WEBHOOK_URL: z.string().url().optional(),
+  TELEGRAM_WEBHOOK_SECRET: z.string().optional(),
+  TELEGRAM_BOT_USERNAME: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);

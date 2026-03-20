@@ -3,11 +3,14 @@ const bcrypt = require('bcrypt');
 const logger = require('../utils/logger');
 
 exports.getUsers = async () => {
-  const { Farm } = require('../models');
+  const { Farm, UserChannelIdentity } = require('../models');
   try {
     return await User.findAll({
       attributes: { exclude: ['password'] },
-      include: [{ model: Farm }]
+      include: [
+        { model: Farm },
+        { model: UserChannelIdentity }
+      ]
     });
   } catch (error) {
     logger.error('Error fetching users from service', { error: error.message });
@@ -125,4 +128,16 @@ exports.deleteUser = async (id) => {
     logger.error('Error deleting user from service', { error: error.message });
     throw error;
   }
+};
+
+
+
+exports.removeTelegramLink = async (userId) => {
+   const { UserChannelIdentity, MessagingLinkCode } = require('../models');
+   
+   await UserChannelIdentity.destroy({
+      where: { user_id: userId, provider: 'telegram' }
+   });
+   
+   return { success: true };
 };

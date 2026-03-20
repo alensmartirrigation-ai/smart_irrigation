@@ -1,7 +1,9 @@
 const express = require('express');
 const { getContext, getAlerts } = require('../controllers/farm.controller');
 const farmService = require('../services/farmService');
+const channelStateService = require('../services/channelState.service');
 const logger = require('../utils/logger');
+const { FarmChannel } = require('../models');
 
 const router = express.Router();
 
@@ -40,6 +42,29 @@ router.put('/farms/:id', async (req, res) => {
             credentials
         );
         res.json(farm);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+router.get('/farms/:id/channels', async (req, res) => {
+    try {
+        const channels = await channelStateService.getChannelsForFarm(req.params.id);
+        res.json(channels);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to retrieve farm channels' });
+    }
+});
+
+router.put('/farms/:id/channels', async (req, res) => {
+    try {
+        const { provider, enabled, config } = req.body;
+        const [channel] = await FarmChannel.findOrCreate({
+            where: { farm_id: req.params.id, provider },
+            defaults: { enabled, status: 'disconnected', config: config || {} }
+        });
+        await channel.update({ enabled, ...(config ? { config } : {}) });
+        res.json(channel);
     } catch (error) {
         res.status(400).json({ error: error.message });
     }

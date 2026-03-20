@@ -19,7 +19,7 @@ class AIService {
     if (!this.openai)
       return "AI disabled.";
 
-    const { farmId } = options;
+    const { farmId, provider = 'Messaging' } = options;
     const toolDefinitions = tools.map(t => t.definition);
 
     // Fetch farm context if available
@@ -31,18 +31,18 @@ class AIService {
         });
         if (farm) {
           const deviceList = farm.Devices.map(d => `  - ${d.device_name || 'Unnamed'} (${d.id}) — ${d.location || 'No location'}`).join('\n');
-          farmContext = `\nCurrent Context:\n- This WhatsApp is connected to farm: "${farm.name}" (ID: ${farm.id})\n- Devices on this farm:\n${deviceList}`;
+            farmContext = `\nCurrent Context:\n- This ${provider} channel is connected to farm: "${farm.name}" (ID: ${farm.id})\n- Devices on this farm:\n${deviceList}`;
+          }
+        } catch (err) {
+          logger.error('Failed to fetch farm context', { error: err.message });
+          farmContext = `\nCurrent Context:\n- Farm ID: ${farmId}`;
         }
-      } catch (err) {
-        logger.error('Failed to fetch farm context', { error: err.message });
-        farmContext = `\nCurrent Context:\n- Farm ID: ${farmId}`;
       }
-    }
-
-    const systemContent = `
-You are a WhatsApp-based farm automation assistant.
-
-System Model:
+  
+      const systemContent = `
+  You are a ${provider}-based farm automation assistant.
+  
+  System Model:
 - Each user belongs to specific farms.
 - Each farm has multiple IoT devices.
 - Each device:
@@ -57,7 +57,7 @@ Operational Rules:
 - If the farm has multiple devices, ask which device.
 - Confirm pump state changes after executing commands.
 - If the device is offline, inform the user immediately.
-- Be concise and practical (WhatsApp style).
+- Be concise and practical (chat style).
 
 You must call tools when:
 - Fetching latest sensor data for a device
@@ -117,7 +117,7 @@ You must call tools when:
       const finalResponse = await this.openai.chat.completions.create({
         model: env.OPENAI_MODEL || "gpt-4o-mini",
         messages: [
-          { role: "system", content: "Summarize the tool results concisely for WhatsApp. Use emojis where appropriate." },
+          { role: "system", content: `Summarize the tool results concisely for ${provider}. Use emojis where appropriate.` },
           { role: "user", content: userMessage },
           message,
           ...toolMessages

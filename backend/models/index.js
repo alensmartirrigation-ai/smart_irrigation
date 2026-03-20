@@ -6,6 +6,8 @@ const FarmDevice = require('./FarmDevice');
 const DeviceIrrigationStatus = require('./DeviceIrrigationStatus');
 const DeviceReading = require('./DeviceReading');
 const DeviceCommand = require('./DeviceCommand');
+const FarmChannel = require('./FarmChannel');
+const UserChannelIdentity = require('./UserChannelIdentity');
 
 const models = {
   User,
@@ -14,7 +16,9 @@ const models = {
   FarmDevice,
   DeviceIrrigationStatus,
   DeviceReading,
-  DeviceCommand
+  DeviceCommand,
+  FarmChannel,
+  UserChannelIdentity
 };
 
 // Initialize associations

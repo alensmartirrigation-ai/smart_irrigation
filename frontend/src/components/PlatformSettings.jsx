@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { io } from 'socket.io-client';
 import { Smartphone, QrCode, Shield, RefreshCw, CheckCircle, LogOut } from 'lucide-react';
+import TelegramSettingsCard from './TelegramSettingsCard';
 import './PlatformSettings.css';
 
 const PlatformSettings = ({ selectedFarm }) => {
@@ -203,6 +204,7 @@ const PlatformSettings = ({ selectedFarm }) => {
           <p>System Status: {status} • Instance: WhatsApp-Primary</p>
         </div>
       </div>
+      <TelegramSettingsCard selectedFarm={selectedFarm} />
     </div>
   );
 };

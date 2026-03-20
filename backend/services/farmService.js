@@ -198,8 +198,12 @@ from(bucket: "${influxBucket}")
 
 const getFarms = async () => {
     try {
+        const { FarmChannel } = require('../models');
         const farms = await Farm.findAll({
-            include: [{ model: User, attributes: { exclude: ['password'] } }]
+            include: [
+              { model: User, attributes: { exclude: ['password'] } },
+              { model: FarmChannel }
+            ]
         });
         return farms.map(f => f.toJSON());
     } catch (error) {

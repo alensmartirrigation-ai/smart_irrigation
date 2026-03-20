@@ -41,4 +41,16 @@ router.delete('/users/:id', authenticateToken, authorizeAdmin, async (req, res) 
   }
 });
 
+
+
+router.delete('/users/:id/telegram-link', authenticateToken, authorizeAdmin, async (req, res) => {
+  try {
+    await userService.removeTelegramLink(req.params.id);
+    res.json({ message: 'Telegram unlinked successfully' });
+  } catch (error) {
+    logger.error('Failed to unlink telegram', { error: error.message });
+    res.status(400).json({ error: error.message });
+  }
+});
+
 module.exports = router;

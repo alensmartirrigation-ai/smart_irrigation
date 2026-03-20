@@ -1,0 +1,10 @@
+{"env":"production","level":"info","message":"Server listening","port":4000,"timestamp":"2026-03-20T18:57:21.492Z"}
+{"level":"info","message":"Database synced","timestamp":"2026-03-20T18:57:21.560Z"}
+{"level":"info","message":"Restoring session for farm 0a4c96f0-74ad-4fc7-a5e6-96772a64b6b1","timestamp":"2026-03-20T18:57:21.564Z"}
+{"level":"info","message":"Using WA Web version: 2.3000.1035194821","timestamp":"2026-03-20T18:57:21.853Z"}
+{"connection":"connecting","hasLastDisconnect":false,"hasQr":false,"level":"info","message":"connection.update for farm 0a4c96f0-74ad-4fc7-a5e6-96772a64b6b1","timestamp":"2026-03-20T18:57:21.874Z"}
+{"hasLastDisconnect":false,"hasQr":true,"level":"info","message":"connection.update for farm 0a4c96f0-74ad-4fc7-a5e6-96772a64b6b1","timestamp":"2026-03-20T18:57:22.760Z"}
+{"level":"info","message":"QR received for farm 0a4c96f0-74ad-4fc7-a5e6-96772a64b6b1 - emitting to clients","timestamp":"2026-03-20T18:57:22.762Z"}
+{"level":"info","message":"Telegram webhook registered","ok":true,"timestamp":"2026-03-20T18:57:23.240Z","webhookUrl":"https://lucky-melons-jog.loca.lt/api/telegram/webhook"}
+{"botUsername":"your_bot_username_without_the_@","level":"info","message":"Telegram service initialized","timestamp":"2026-03-20T18:57:23.248Z","webhookHealth":true}
+{"level":"warn","message":"HEAD /api/whatsapp/status 400 3ms","meta":{},"timestamp":"2026-03-20T18:57:24.055Z"}

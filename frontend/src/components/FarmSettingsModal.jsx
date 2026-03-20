@@ -1,24 +1,37 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import Modal from './Modal';
-import { Settings, MessageSquare, Loader, Save } from 'lucide-react';
+import { Settings, MessageSquare, Loader, Save, CheckSquare, Square } from 'lucide-react';
 
 const FarmSettingsModal = ({ isOpen, onClose, farm, onSettingsUpdated }) => {
-  const [formData, setFormData] = useState({
-    message_platform: 'whatsapp',
-    credentials: {}
-  });
+  const [waEnabled, setWaEnabled] = useState(false);
+  const [tgEnabled, setTgEnabled] = useState(false);
+  const [credentials, setCredentials] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (farm) {
-      setFormData({
-        message_platform: farm.message_platform || 'whatsapp',
-        credentials: farm.credentials || {}
-      });
+    if (farm && isOpen) {
+      setCredentials(farm.credentials || {});
+      const fetchChannels = async () => {
+         try {
+           const token = localStorage.getItem('token');
+           const res = await axios.get(`/api/farms/${farm.id}/channels`, {
+              headers: { Authorization: `Bearer ${token}` }
+           });
+           const channels = res.data;
+           const wa = channels.find(c => c.provider === 'whatsapp');
+           const tg = channels.find(c => c.provider === 'telegram');
+           
+           setWaEnabled(wa ? wa.enabled : farm.message_platform === 'whatsapp');
+           setTgEnabled(tg ? tg.enabled : farm.message_platform === 'telegram');
+         } catch (err) {
+           console.error('Failed to load farm channels', err);
+         }
+      };
+      fetchChannels();
     }
-  }, [farm]);
+  }, [farm, isOpen]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -26,10 +39,16 @@ const FarmSettingsModal = ({ isOpen, onClose, farm, onSettingsUpdated }) => {
     setError(null);
     try {
       const token = localStorage.getItem('token');
-      // Assuming there's a PUT /api/farms/:id endpoint for updating
-      await axios.put(`/api/farms/${farm.id}`, formData, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const headers = { Authorization: `Bearer ${token}` };
+      
+      // Update channels
+      await axios.put(`/api/farms/${farm.id}/channels`, { provider: 'whatsapp', enabled: waEnabled }, { headers });
+      await axios.put(`/api/farms/${farm.id}/channels`, { provider: 'telegram', enabled: tgEnabled }, { headers });
+
+      // Mirror to legacy farm object just in case
+      const legacyPlatform = waEnabled ? 'whatsapp' : (tgEnabled ? 'telegram' : 'whatsapp');
+      await axios.put(`/api/farms/${farm.id}`, { message_platform: legacyPlatform, credentials }, { headers });
+      
       onSettingsUpdated();
       onClose();
     } catch (err) {
@@ -40,12 +59,9 @@ const FarmSettingsModal = ({ isOpen, onClose, farm, onSettingsUpdated }) => {
   };
 
   const handleCredentialChange = (key, value) => {
-    setFormData({
-      ...formData,
-      credentials: {
-        ...formData.credentials,
-        [key]: value
-      }
+    setCredentials({
+      ...credentials,
+      [key]: value
     });
   };
 
@@ -54,26 +70,30 @@ const FarmSettingsModal = ({ isOpen, onClose, farm, onSettingsUpdated }) => {
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={`Settings: ${farm.name}`}>
       <form onSubmit={handleSubmit} className="admin-form">
-        <div className="input-field-nm">
-          <MessageSquare size={18} />
-          <select 
-            value={formData.message_platform} 
-            onChange={(e) => setFormData({ ...formData, message_platform: e.target.value })}
-          >
-            <option value="whatsapp">WhatsApp</option>
-            <option value="telegram">Telegram</option>
-            <option value="email">Email</option>
-          </select>
+        <div className="settings-section">
+          <h4 style={{ color: 'var(--nm-accent)', marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+             <MessageSquare size={18} /> Active Channels
+          </h4>
+          <div style={{ display: 'flex', gap: '20px', marginBottom: '20px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+               <input type="checkbox" checked={waEnabled} onChange={(e) => setWaEnabled(e.target.checked)} style={{ width: '18px', height: '18px' }} />
+               WhatsApp
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+               <input type="checkbox" checked={tgEnabled} onChange={(e) => setTgEnabled(e.target.checked)} style={{ width: '18px', height: '18px' }} />
+               Telegram
+            </label>
+          </div>
         </div>
 
-        {formData.message_platform === 'whatsapp' && (
+        {waEnabled && (
           <div className="settings-section">
-            <h4 style={{ color: 'var(--nm-accent)', marginBottom: '15px' }}>WhatsApp Config</h4>
+            <h4 style={{ color: 'var(--nm-accent)', marginBottom: '15px' }}>WhatsApp Legacy Options</h4>
             <div className="input-field-nm" style={{ marginBottom: '15px' }}>
               <input 
                 type="text" 
                 placeholder="Instance ID" 
-                value={formData.credentials.instanceId || ''} 
+                value={credentials.instanceId || ''} 
                 onChange={(e) => handleCredentialChange('instanceId', e.target.value)}
               />
             </div>
@@ -81,7 +101,7 @@ const FarmSettingsModal = ({ isOpen, onClose, farm, onSettingsUpdated }) => {
               <input 
                 type="text" 
                 placeholder="Token" 
-                value={formData.credentials.token || ''} 
+                value={credentials.token || ''} 
                 onChange={(e) => handleCredentialChange('token', e.target.value)}
               />
             </div>

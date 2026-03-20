@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { User, Phone, Shield, Search, RefreshCw, Plus, Trash2, MapPin } from 'lucide-react';
+import { User, Phone, Shield, Search, RefreshCw, Plus, Trash2, MapPin, MessageSquare } from 'lucide-react';
 import AddUserModal from './AddUserModal';
 import './UserList.css';
 
@@ -45,6 +45,21 @@ const UserList = () => {
       fetchUsers();
     } catch (err) {
       alert(err.response?.data?.error || 'Failed to delete user');
+    }
+  };
+
+
+
+  const handleUnlinkTelegram = async (user) => {
+    if (!window.confirm('Unlink this user from Telegram?')) return;
+    try {
+       const token = localStorage.getItem('token');
+       await axios.delete(`/api/users/${user.id}/telegram-link`, {
+           headers: { Authorization: `Bearer ${token}` }
+       });
+       fetchUsers();
+    } catch (err) {
+       alert(err.response?.data?.error || 'Failed to unlink Telegram');
     }
   };
 
@@ -127,6 +142,33 @@ const UserList = () => {
                     ) : (
                       <p className="no-farms">No farm assigned</p>
                     )}
+                  </div>
+                  <div className="section-header" style={{ marginTop: '10px' }}>
+                    <MessageSquare size={14} />
+                    <span>Telegram</span>
+                  </div>
+                  <div className="telegram-actions" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '5px' }}>
+                    {(() => {
+                        const tgIdentity = user.UserChannelIdentities?.find(i => i.provider === 'telegram');
+                        if (tgIdentity && tgIdentity.status === 'linked') {
+                            return (
+                                <>
+                                  <span className="linked-badge">Linked: @{tgIdentity.external_username || tgIdentity.display_name}</span>
+                                  {isAdmin && (
+                                     <button className="delete-btn-nm small" onClick={() => handleUnlinkTelegram(user)} title="Unlink Telegram">
+                                       <Trash2 size={14} />
+                                     </button>
+                                  )}
+                                </>
+                            );
+                        } else {
+                            return (
+                                <>
+                                  <span className="unlinked-badge">Unlinked</span>
+                                </>
+                            );
+                        }
+                    })()}
                   </div>
                 </div>
               </div>
